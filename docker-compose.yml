@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: warignan-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: warignan
+      POSTGRES_PASSWORD: warignan_secret
+      POSTGRES_DB: warignan_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - warignan_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U warignan -d warignan_db']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: warignan-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@warignan.ci
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - '5050:80'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  warignan_pgdata:

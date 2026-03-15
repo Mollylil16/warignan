@@ -1,0 +1,1 @@
+// Footer — à implémenter

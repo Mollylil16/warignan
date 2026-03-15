@@ -1,0 +1,1 @@
+// StatusBadge — à implémenter
