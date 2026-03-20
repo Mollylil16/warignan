@@ -85,6 +85,8 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
       {/* ---- ZONE INFOS PRODUIT ---- */}
       <div className="flex justify-between items-start gap-4 px-4 py-4">
+      background = 'linear-gradient(0deg, rgba(254, 44, 85, 0.45) 0%, rgba(5, 5, 5, 0) 100%)',
+             
         <div className="flex-1">
           {/* Nom du produit */}
           <h2
