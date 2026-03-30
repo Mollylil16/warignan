@@ -1,34 +1,37 @@
-
 const Navbar = () => {
-    return (
-      <header
-        className="flex justify-between items-center px-4 py-5 sticky top-0 z-50"
+  return (
+    <header
+      className="sticky top-0 z-50 flex h-14 shrink-0 items-center justify-between px-4 sm:h-16 sm:px-6"
+      style={{
+        background: '#ffff',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+      }}
+    >
+      {/* Logo WARIGNAN avec Yesteryear */}
+      <div
+        className="text-2xl sm:text-[28px]"
         style={{
-          borderBottom: '1px solid #2A2A2A',
-          // Fond légèrement transparent avec flou (effet glassmorphism)
-          background: 'rgba(5, 5, 5, 0.9)',
-          // backdropFilter = flou sur ce qui est DERRIÈRE l'élément
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)', // Préfixe pour Safari (iPhone)
+          fontFamily: "cursive",
+          fontWeight: 900,
+          color: '#BA4F64',
         }}
       >
-        {/* Logo WARIGNAN avec style Space Grotesk */}
-        <div
-          style={{
-            fontFamily: "'Space Grotesk', sans-serif",
-            fontSize: '24px',
-            fontWeight: 800,
-            letterSpacing: '-1px',
-            color: '#FFFFFF',
-          }}
-        >
-          WARIGNAN
-        </div>
-  
-        {/* Icône panier (simple emoji pour l'instant) */}
-        <div style={{ fontSize: '20px', cursor: 'pointer' }}>🛒</div>
-      </header>
-    );
-  };
-  
-  export default Navbar;
+        WARIGNAN
+      </div>
+
+      {/* Icône panier */}
+      <div
+        className="text-lg sm:text-xl"
+        style={{ cursor: 'pointer' }}
+        role="button"
+        tabIndex={0}
+        aria-label="Panier"
+      >
+        🛒
+      </div>
+    </header>
+  );
+};
+
+export default Navbar;

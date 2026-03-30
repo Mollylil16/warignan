@@ -78,31 +78,29 @@ const FouillePage = () => {
         maxProductPrice={maxProductPrice}
       />
 
-      {/* ---- CATALOGUE PRODUITS ---- */}
+      {/* ---- CATALOGUE PRODUITS (grille 3 × 3) ---- */}
       {/* id="feed" permet le scroll depuis le bouton CTA */}
       <main
         id="feed"
+        className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-px px-2 pb-6 sm:gap-1 sm:px-4 sm:pb-8 md:grid-cols-3 md:gap-2 lg:px-6"
         style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '2px',           // Petit espace entre les cartes
-          background: '#2A2A2A', // Couleur visible dans le gap
+          background: '#2A2A2A',
         }}
       >
         {/* Si aucun produit ne correspond aux filtres */}
         {filteredProducts.length === 0 ? (
           <div
-            className="text-center py-20"
+            className="col-span-2 py-16 text-center sm:py-20 md:col-span-3"
             style={{ color: '#888', fontSize: '14px' }}
           >
             <div style={{ fontSize: '40px', marginBottom: '16px' }}>🔍</div>
             <p>Aucun produit trouvé pour ces filtres</p>
           </div>
         ) : (
-          // map() = transformer chaque produit en composant ProductCard
           filteredProducts.map((product) => (
-            // key = identifiant unique requis par React pour les listes
-            <ProductCard key={product.id} product={product} />
+            <div key={product.id} className="min-w-0">
+              <ProductCard product={product} />
+            </div>
           ))
         )}
       </main>

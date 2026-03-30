@@ -17,7 +17,7 @@ interface FilterBarProps {
 const CATEGORY_PILLS = [
   { label: 'Tout', value: 'ALL' as const },
   { label: 'Robes', value: 'ROBE' as const },
-  { label: 'Crocs', value: 'CROP' as const },
+  { label: 'Crop', value: 'CROP' as const },
 ];
 
 const SORT_PILLS = [
@@ -29,20 +29,17 @@ const SORT_PILLS = [
 const FilterBar = ({ filters, onFilterChange, maxProductPrice }: FilterBarProps) => {
   return (
     <nav
-      className="px-4 py-3 sticky z-40"
+      className="sticky top-14 z-40 border-b border-[#2A2A2A] px-3 py-2.5 sm:top-16 sm:px-4 sm:py-3"
       style={{
-        // top: 73px = juste en dessous de la navbar (hauteur navbar ≈ 73px)
-        top: '73px',
-        background: '#050505',
-        borderBottom: '1px solid #2A2A2A',
+        background: '#170b00',
       }}
     >
       {/* Scroll horizontal pour les pills */}
       {/* overflow-x: auto = scrollable horizontalement */}
       {/* scrollbar-hide = classe Tailwind custom pour cacher la scrollbar */}
       <div
-        className="flex gap-2 overflow-x-auto pb-1"
-        style={{ scrollbarWidth: 'none' }} // Cache la scrollbar sur Firefox
+        className="-mx-0.5 flex gap-1.5 overflow-x-auto pb-1 sm:gap-2 sm:mx-0"
+        style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
       >
 
         {/* ---- PILLS DE CATÉGORIE ---- */}
@@ -58,9 +55,9 @@ const FilterBar = ({ filters, onFilterChange, maxProductPrice }: FilterBarProps)
                 background: isActive ? '#FFFFFF' : '#121212',
                 color: isActive ? '#050505' : '#FFFFFF',
                 border: isActive ? '1px solid #FFFFFF' : '1px solid #2A2A2A',
-                padding: '8px 16px',
+                padding: '7px 12px',
                 borderRadius: '50px',
-                fontSize: '13px',
+                fontSize: '12px',
                 fontWeight: 600,
                 whiteSpace: 'nowrap', // Empêche le texte de se couper
                 cursor: 'pointer',
@@ -83,9 +80,9 @@ const FilterBar = ({ filters, onFilterChange, maxProductPrice }: FilterBarProps)
                 background: isActive ? '#25F4EE' : '#121212',
                 color: isActive ? '#050505' : '#25F4EE',
                 border: `1px solid ${isActive ? '#25F4EE' : '#25F4EE55'}`,
-                padding: '8px 16px',
+                padding: '7px 12px',
                 borderRadius: '50px',
-                fontSize: '13px',
+                fontSize: '12px',
                 fontWeight: 600,
                 whiteSpace: 'nowrap',
                 cursor: 'pointer',
@@ -100,11 +97,13 @@ const FilterBar = ({ filters, onFilterChange, maxProductPrice }: FilterBarProps)
 
       {/* ---- SLIDER DE PRIX ---- */}
       <div
-        className="flex items-center gap-3 mt-3"
-        style={{ fontSize: '12px', color: '#888' }}
+        className="mt-3 flex min-w-0 items-center gap-2 sm:gap-3"
+        style={{ fontSize: '11px', color: '#888' }}
       >
         {/* Prix minimum (fixe) */}
-        <span style={{ whiteSpace: 'nowrap' }}>1 000F</span>
+        <span className="shrink-0 text-[10px] sm:text-xs" style={{ whiteSpace: 'nowrap' }}>
+          1 000F
+        </span>
 
         {/* Le slider HTML natif */}
         <input
@@ -118,7 +117,7 @@ const FilterBar = ({ filters, onFilterChange, maxProductPrice }: FilterBarProps)
             // parseInt convertit la valeur string du input en nombre
             onFilterChange({ maxPrice: parseInt(e.target.value) })
           }
-          className="flex-1"
+          className="min-w-0 flex-1 touch-manipulation py-2"
           style={{
             // On stylise le slider manuellement
             WebkitAppearance: 'none',
@@ -131,7 +130,10 @@ const FilterBar = ({ filters, onFilterChange, maxProductPrice }: FilterBarProps)
         />
 
         {/* Prix maximum dynamique (suit le slider) */}
-        <span style={{ whiteSpace: 'nowrap', color: '#25F4EE', fontWeight: 600 }}>
+        <span
+          className="shrink-0 text-[10px] sm:text-xs"
+          style={{ whiteSpace: 'nowrap', color: '#25F4EE', fontWeight: 600 }}
+        >
           {/* toLocaleString pour formater avec espace : 15500 → "15 500" */}
           {filters.maxPrice.toLocaleString('fr-FR')}F
         </span>

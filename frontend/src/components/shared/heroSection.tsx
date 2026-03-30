@@ -14,19 +14,11 @@ const HeroSection = () => {
   
     return (
       <section
-        className="px-4 text-center"
-        style={{
-          paddingTop: '32px',
-          paddingBottom: '24px',
-          // Dégradé rose en haut qui s'estompe vers le bas
-          background:
-            'linear-gradient(180deg, rgba(254,44,85,0.15) 0%, rgba(5,5,5,0) 100%)',
-          borderBottom: '1px solid #2A2A2A',
-        }}
+        className="mx-auto max-w-3xl px-4 pb-6 pt-6 text-center sm:px-6 sm:pb-8 sm:pt-8 md:max-w-4xl md:px-8"
       >
         {/* ---- BADGE LIVE ---- */}
         <div className="flex justify-center mb-4">
-          <div
+          <div  
             className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-widest"
             style={{
               background: 'rgba(255, 0, 0, 0.1)',
@@ -51,48 +43,36 @@ const HeroSection = () => {
   
         {/* ---- TITRE PRINCIPAL ---- */}
         <h1
+          className="mb-2 text-[22px] leading-tight tracking-tight sm:text-3xl md:text-4xl"
           style={{
             fontFamily: "'Space Grotesk', sans-serif",
-            fontSize: '28px',
             fontWeight: 800,
-            lineHeight: 1.1,
-            letterSpacing: '-1px',
-            color: '#FFFFFF',
+            color: '#BA4F64',
             textTransform: 'uppercase',
-            marginBottom: '8px',
           }}
         >
-          Viens fouiller !
+          Viens fouiller ma caviar!
         </h1>
   
         {/* ---- SOUS-TITRE ---- */}
         <p
-          style={{
-            color: '#888',
-            fontSize: '14px',
-            marginBottom: '24px',
-            lineHeight: 1.5,
-          }}
+          className="mx-auto mb-6 max-w-md text-sm leading-relaxed text-[#888] sm:mb-8 sm:text-base md:max-w-lg"
         >
-          Clique, fouille, commande.
+          Nous avons, les pépites, le genre qui va avec le genre.
           <br />
-          Pas besoin de compte.
+          Fait ton choix , ma warignan love ❤️.
         </p>
   
         {/* ---- BOUTON CTA ---- */}
         <button
+          type="button"
           onClick={scrollToFeed}
-          className="w-full"
+          className="w-full max-w-md px-4 py-3.5 text-sm font-bold uppercase tracking-wide sm:mx-auto sm:block sm:max-w-lg sm:py-4 sm:text-base"
           style={{
-            background: '#FFFFFF',
-            color: '#050505',
+            background: '#FF0000',
+            color: '#FFFFFF',
             fontFamily: "'Space Grotesk', sans-serif",
-            fontWeight: 700,
-            fontSize: '16px',
-            padding: '16px',
             borderRadius: '4px',
-            textTransform: 'uppercase' as const,
-            letterSpacing: '0.5px',
             border: 'none',
             cursor: 'pointer',
           }}

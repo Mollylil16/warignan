@@ -14,7 +14,7 @@ const StockBadge = ({ status, stock }: StockBadgeProps) => {
   if (status === ProductStatus.RESERVER) {
     // Produit réservé : badge orange
     return (
-      <div className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded text-xs font-black uppercase tracking-wide backdrop-blur-sm bg-orange-500/15 border border-orange-500 text-orange-400">
+      <div className="absolute right-2 top-2 z-20 rounded border border-orange-500 bg-orange-500/15 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-orange-400 backdrop-blur-sm sm:right-4 sm:top-4 sm:px-3 sm:py-1.5 sm:text-xs">
         Réservé
       </div>
     );
@@ -23,7 +23,7 @@ const StockBadge = ({ status, stock }: StockBadgeProps) => {
   if (status === ProductStatus.SOLD) {
     // Produit vendu : badge gris
     return (
-      <div className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded text-xs font-black uppercase tracking-wide backdrop-blur-sm bg-gray-500/15 border border-gray-500 text-gray-400">
+      <div className="absolute right-2 top-2 z-20 rounded border border-gray-500 bg-gray-500/15 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-gray-400 backdrop-blur-sm sm:right-4 sm:top-4 sm:px-3 sm:py-1.5 sm:text-xs">
         Vendu
       </div>
     );
@@ -33,7 +33,7 @@ const StockBadge = ({ status, stock }: StockBadgeProps) => {
   if (stock === 1) {
     // Stock = 1 → "Dernier !" avec animation clignotante
     return (
-      <div className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded text-xs font-black uppercase tracking-wide backdrop-blur-sm border text-white animate-pulse-border"
+      <div className="absolute right-2 top-2 z-20 rounded border px-2 py-1 text-[10px] font-black uppercase tracking-wide text-white backdrop-blur-sm sm:right-4 sm:top-4 sm:px-3 sm:py-1.5 sm:text-xs"
         style={{
           // Style inline car l'animation custom ne peut pas être faite en Tailwind pur
           background: 'rgba(255, 0, 0, 0.2)',
@@ -48,7 +48,7 @@ const StockBadge = ({ status, stock }: StockBadgeProps) => {
 
   // Stock normal : badge vert "Disponible"
   return (
-    <div className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded text-xs font-black uppercase tracking-wide backdrop-blur-sm"
+    <div className="absolute right-2 top-2 z-20 rounded px-2 py-1 text-[10px] font-black uppercase tracking-wide backdrop-blur-sm sm:right-4 sm:top-4 sm:px-3 sm:py-1.5 sm:text-xs"
       style={{
         background: 'rgba(0, 255, 85, 0.15)',
         border: '1px solid #00FF55',
