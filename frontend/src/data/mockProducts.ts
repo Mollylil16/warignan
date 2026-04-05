@@ -2,9 +2,13 @@
 // Données fictives (mock data) pour tester le frontend
 // SANS le backend. On remplacera ça plus tard par de vraies
 // requêtes API avec React Query.
+// Images : fichiers servis depuis frontend/public/images/
 // ============================================================
 
 import { Product, ProductCategory, ProductStatus } from '../types';
+
+const WA =
+  '/images/WhatsApp%20Image%202026-03-28%20at%2023.01.00.jpeg';
 
 // Tableau de produits fictifs qui simule ce que l'API retournera
 export const mockProducts: Product[] = [
@@ -16,12 +20,8 @@ export const mockProducts: Product[] = [
     prix: 12500,
     category: ProductCategory.ROBE,
     status: ProductStatus.DISPONIBLE,
-    // stock à 1 = on affichera "Dernier !"
     stock: 1,
-    imageName: [
-      '/images/WhatsApp%20Image%202026-03-28%20at%2023.01.00.jpeg',
-      'https://images.pexels.com/photos/1055691/pexels-photo-1055691.jpeg?auto=compress&cs=tinysrgb&w=800',
-    ],
+    imageName: [WA, '/images/robe.webp'],
     createdAt: '2024-01-15T10:00:00Z',
   },
   {
@@ -33,25 +33,19 @@ export const mockProducts: Product[] = [
     category: ProductCategory.CROP,
     status: ProductStatus.DISPONIBLE,
     stock: 3,
-    imageName: [
-      'https://images.pexels.com/photos/10321101/pexels-photo-10321101.jpeg?auto=compress&cs=tinysrgb&w=800',
-      'https://images.pexels.com/photos/10321105/pexels-photo-10321105.jpeg?auto=compress&cs=tinysrgb&w=800',
-    ],
+    imageName: ['/images/croc4.webp', '/images/croc5.jpg'],
     createdAt: '2024-01-16T10:00:00Z',
   },
   {
     id: '3',
     code: '#R-019',
     nom: 'Maxi Robe Fleurie Été',
-    description: 'Maxi robe fleurie pour l\'été',
+    description: "Maxi robe fleurie pour l'été",
     prix: 8000,
     category: ProductCategory.ROBE,
-    // Ce produit est réservé → les boutons seront désactivés
     status: ProductStatus.RESERVER,
     stock: 1,
-    imageName: [
-      'https://images.pexels.com/photos/1852382/pexels-photo-1852382.jpeg?auto=compress&cs=tinysrgb&w=800',
-    ],
+    imageName: ['/images/robe3.webp', '/images/robe4.jpg'],
     createdAt: '2024-01-14T10:00:00Z',
   },
   {
@@ -63,9 +57,7 @@ export const mockProducts: Product[] = [
     category: ProductCategory.CROP,
     status: ProductStatus.DISPONIBLE,
     stock: 2,
-    imageName: [
-      'https://images.pexels.com/photos/10321105/pexels-photo-10321105.jpeg?auto=compress&cs=tinysrgb&w=800',
-    ],
+    imageName: ['/images/croc3.webp', '/images/crocs2.webp'],
     createdAt: '2024-01-17T10:00:00Z',
   },
   {
@@ -77,9 +69,7 @@ export const mockProducts: Product[] = [
     category: ProductCategory.ROBE,
     status: ProductStatus.DISPONIBLE,
     stock: 2,
-    imageName: [
-      'https://images.pexels.com/photos/1536619/pexels-photo-1536619.jpeg?auto=compress&cs=tinysrgb&w=800',
-    ],
+    imageName: ['/images/robe5.webp', '/images/robe6.avif'],
     createdAt: '2024-01-18T10:00:00Z',
   },
   {
@@ -91,9 +81,7 @@ export const mockProducts: Product[] = [
     category: ProductCategory.ROBE,
     status: ProductStatus.DISPONIBLE,
     stock: 1,
-    imageName: [
-      'https://images.pexels.com/photos/2220316/pexels-photo-2220316.jpeg?auto=compress&cs=tinysrgb&w=800',
-    ],
+    imageName: ['/images/robe7.webp', '/images/robe8.webp'],
     createdAt: '2024-01-12T10:00:00Z',
   },
   {
@@ -105,9 +93,7 @@ export const mockProducts: Product[] = [
     category: ProductCategory.CROP,
     status: ProductStatus.DISPONIBLE,
     stock: 4,
-    imageName: [
-      'https://images.pexels.com/photos/6311392/pexels-photo-6311392.jpeg?auto=compress&cs=tinysrgb&w=800',
-    ],
+    imageName: ['/images/croc7.jpg', '/images/croc.avif'],
     createdAt: '2024-01-19T10:00:00Z',
   },
   {
@@ -119,9 +105,7 @@ export const mockProducts: Product[] = [
     category: ProductCategory.ROBE,
     status: ProductStatus.DISPONIBLE,
     stock: 2,
-    imageName: [
-      'https://images.pexels.com/photos/985635/pexels-photo-985635.jpeg?auto=compress&cs=tinysrgb&w=800',
-    ],
+    imageName: ['/images/robe2.jpg', '/images/robe4.jpg'],
     createdAt: '2024-01-20T10:00:00Z',
   },
   {
@@ -133,9 +117,7 @@ export const mockProducts: Product[] = [
     category: ProductCategory.CROP,
     status: ProductStatus.DISPONIBLE,
     stock: 5,
-    imageName: [
-      'https://images.pexels.com/photos/6311666/pexels-photo-6311666.jpeg?auto=compress&cs=tinysrgb&w=800',
-    ],
+    imageName: ['/images/crocs6.jpg', '/images/crocs2.webp'],
     createdAt: '2024-01-21T10:00:00Z',
   },
 ];

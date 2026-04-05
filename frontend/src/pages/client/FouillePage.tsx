@@ -6,7 +6,7 @@ import { useState, useMemo } from 'react';
 
 import { productFilters, ProductCategory } from '../../types';
 import { mockProducts } from '../../data/mockProducts';
-import HeroSection from '../../components/shared/heroSection';
+import { Search } from 'lucide-react';
 import FilterBar from '../../components/shared/StatusBadge';
 import ProductCard from '../../components/shared/ProductCard';
 
@@ -66,26 +66,16 @@ const FouillePage = () => {
   }, [filters]); // Dépendances : recalculer si filters change
 
   return (
-    // Fragment <> </> = wrapper invisible (pas de div inutile dans le DOM)
     <>
-      {/* Section héro avec badge LIVE et CTA */}
-      <HeroSection />
-
-      {/* Barre de filtres sticky */}
       <FilterBar
         filters={filters}
         onFilterChange={handleFilterChange}
         maxProductPrice={maxProductPrice}
       />
 
-      {/* ---- CATALOGUE PRODUITS (grille 3 × 3) ---- */}
-      {/* id="feed" permet le scroll depuis le bouton CTA */}
       <main
         id="feed"
-        className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-px px-2 pb-6 sm:gap-1 sm:px-4 sm:pb-8 md:grid-cols-3 md:gap-2 lg:px-6"
-        style={{
-          background: '#2A2A2A',
-        }}
+        className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-3 bg-[#050505] px-3 pb-8 sm:gap-4 sm:px-4 sm:pb-10 md:grid-cols-3 md:gap-5 lg:px-6"
       >
         {/* Si aucun produit ne correspond aux filtres */}
         {filteredProducts.length === 0 ? (
@@ -93,7 +83,11 @@ const FouillePage = () => {
             className="col-span-2 py-16 text-center sm:py-20 md:col-span-3"
             style={{ color: '#888', fontSize: '14px' }}
           >
-            <div style={{ fontSize: '40px', marginBottom: '16px' }}>🔍</div>
+            <Search
+              className="mx-auto mb-4 h-12 w-12 text-neutral-600"
+              strokeWidth={1.25}
+              aria-hidden
+            />
             <p>Aucun produit trouvé pour ces filtres</p>
           </div>
         ) : (

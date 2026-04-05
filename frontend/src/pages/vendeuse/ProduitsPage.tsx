@@ -1,1 +1,0 @@
-// Gestion produits — à implémenter

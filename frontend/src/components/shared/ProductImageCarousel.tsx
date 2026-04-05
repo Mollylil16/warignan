@@ -7,8 +7,8 @@ interface ProductImageCarouselProps {
 }
 
 /**
- * Carrousel horizontal type « Pinterest » : swipe natif, snap, pastilles en bas.
- * Images en object-contain pour voir davantage l’article (moins de zoom / crop).
+ * Carrousel horizontal : swipe natif, snap, pastilles en bas.
+ * object-cover + cadre fixe pour une grille de cartes alignée et homogène.
  */
 const ProductImageCarousel = ({
   images,
@@ -69,15 +69,16 @@ const ProductImageCarousel = ({
         {slides.map((src, i) => (
           <div
             key={`${src}-${i}`}
-            className="flex h-full min-w-full shrink-0 snap-center items-center justify-center bg-[#0d0d0d] px-2 py-2 sm:px-3 sm:py-3"
+            className="relative h-full min-w-full shrink-0 snap-center overflow-hidden bg-[#0a0a0a]"
           >
             <img
               src={src}
               alt={`${alt} — ${i + 1}`}
-              className="max-h-full max-w-full select-none object-contain"
+              className="h-full w-full select-none object-cover object-center"
               style={imgFilter ? { filter: imgFilter } : undefined}
               draggable={false}
               loading="lazy"
+              decoding="async"
             />
           </div>
         ))}

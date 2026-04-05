@@ -1,1 +1,95 @@
-// Layout dashboard vendeuse — à implémenter
+import { NavLink, Outlet } from 'react-router-dom';
+import { Bell, Search } from 'lucide-react';
+
+const links: { to: string; label: string; end?: boolean }[] = [
+  { to: '/vendeuse', label: "Vue d'ensemble", end: true },
+  { to: '/vendeuse/reservations', label: 'Réservations' },
+  { to: '/vendeuse/commandes', label: 'Commandes' },
+  { to: '/vendeuse/livraisons', label: 'Livraisons & agenda' },
+  { to: '/vendeuse/livreurs', label: 'Livreurs' },
+  { to: '/vendeuse/medias', label: 'Images du site' },
+  { to: '/vendeuse/promotions', label: 'Réductions' },
+];
+
+const VendeuseLayout = () => {
+  return (
+    <div className="flex min-h-screen bg-[#070707] text-white">
+      <aside className="flex w-56 shrink-0 flex-col border-r border-white/10 px-3 py-6 sm:w-64 sm:px-4">
+        <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-tiktok-pink">
+          Warignan
+        </p>
+        <p className="mb-6 text-sm font-bold text-neutral-200">Espace vendeuse</p>
+        <nav className="flex flex-1 flex-col gap-0.5">
+          {links.map(({ to, label, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={Boolean(end)}
+              className={({ isActive }) =>
+                `rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-white/10 text-white'
+                    : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'
+                }`
+              }
+            >
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+        <NavLink
+          to="/fouille"
+          className="mt-6 rounded-lg border border-white/15 px-3 py-2 text-center text-xs text-neutral-500 hover:border-tiktok-cyan/40 hover:text-tiktok-cyan"
+        >
+          Voir la boutique
+        </NavLink>
+      </aside>
+
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b border-white/10 bg-[#070707]/90 px-4 py-3 backdrop-blur-md sm:px-6">
+          <div className="relative min-w-[200px] max-w-md flex-1">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500"
+              strokeWidth={2}
+              aria-hidden
+            />
+            <input
+              type="search"
+              placeholder="Rechercher commande, client, référence…"
+              className="w-full rounded-lg border border-white/10 bg-[#111] py-2 pl-10 pr-3 text-sm text-white placeholder:text-neutral-600 focus:border-reserve-purple/50 focus:outline-none focus:ring-1 focus:ring-reserve-purple/40"
+              aria-label="Recherche"
+            />
+          </div>
+          <div className="ml-auto flex items-center gap-3">
+            <button
+              type="button"
+              className="relative rounded-lg p-2 text-neutral-400 hover:bg-white/10 hover:text-white"
+              aria-label="Notifications"
+            >
+              <Bell className="h-5 w-5" strokeWidth={2} />
+              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-tiktok-pink" />
+            </button>
+            <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111] py-1 pl-1 pr-3">
+              <div
+                className="flex h-8 w-8 items-center justify-center rounded-md bg-gradient-to-br from-reserve-purple to-tiktok-pink text-xs font-bold text-white"
+                aria-hidden
+              >
+                W
+              </div>
+              <div className="text-left">
+                <p className="text-xs font-semibold text-white">Compte vendeuse</p>
+                <p className="text-[10px] text-neutral-500">Auth à brancher</p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="min-h-0 flex-1 overflow-auto p-4 sm:p-8">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default VendeuseLayout;

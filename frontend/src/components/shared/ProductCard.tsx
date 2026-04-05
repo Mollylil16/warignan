@@ -1,6 +1,5 @@
-
-import { useNavigate } from 'react-router-dom';
 import { Product, ProductStatus } from '../../types';
+import { useCartStore } from '../../stores/cartStore';
 import { formatPriceParts } from '../../utils/formatPrice';
 import StockBadge from '../ui/stockBadge';
 import ProductImageCarousel from './ProductImageCarousel';
@@ -11,8 +10,8 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product }: ProductCardProps) => {
-  // useNavigate = hook React Router pour naviguer vers une autre page
-  const navigate = useNavigate();
+  const addToReserve = useCartStore((s) => s.addToReserve);
+  const addToOrder = useCartStore((s) => s.addToOrder);
 
   // On sépare le prix en deux : "12 500" et "FCFA"
   // pour pouvoir les styler différemment
@@ -23,26 +22,22 @@ const ProductCard = ({ product }: ProductCardProps) => {
     product.status === ProductStatus.RESERVER ||
     product.status === ProductStatus.SOLD;
 
-  // Quand on clique sur "Commander" → aller vers /commander avec l'ID du produit
   const handleCommander = () => {
-    navigate(`/commander/${product.id}`);
+    addToOrder(product);
   };
 
-  // Quand on clique sur "Réserver" → aller vers /reserver avec l'ID du produit
   const handleReserver = () => {
-    navigate(`/reserver/${product.id}`);
+    addToReserve(product);
   };
 
   return (
-    // article = balise HTML sémantique pour un élément de contenu indépendant
     <article
-      className="relative pb-3 sm:pb-4"
-      style={{ background: '#050505' }}
+      className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-[#080808] pb-3 shadow-[0_8px_32px_rgba(0,0,0,0.45)] transition-[border-color,box-shadow] duration-300 hover:border-white/[0.12] sm:pb-4"
     >
-      {/* ---- ZONE IMAGE (carrousel type Pinterest + image moins zoomée) ---- */}
+      {/* ---- Zone image (ratio fixe, remplissage uniforme) ---- */}
       <div
-        className="relative w-full overflow-hidden rounded-t-md sm:rounded-t-lg"
-        style={{ aspectRatio: '4/5', background: '#111' }}
+        className="relative w-full overflow-hidden bg-[#111]"
+        style={{ aspectRatio: '3 / 4' }}
       >
         <div className="absolute inset-0 z-10 min-h-0">
           <ProductImageCarousel
@@ -68,35 +63,27 @@ const ProductCard = ({ product }: ProductCardProps) => {
         <StockBadge status={product.status} stock={product.stock} />
       </div>
 
-      {/* ---- ZONE INFOS PRODUIT ---- */}
-      <div className="flex items-start justify-between gap-2 px-2 py-2.5 sm:gap-4 sm:px-4 sm:py-4">
-        <div className="min-w-0 flex-1">
-          {/* Nom du produit */}
+      {/* ---- Infos produit (hauteur mini pour aligner les lignes de grille) ---- */}
+      <div className="flex items-start justify-between gap-2 px-3 py-3 sm:gap-4 sm:px-4 sm:py-4">
+        <div className="flex min-h-[4.25rem] min-w-0 flex-1 flex-col justify-between sm:min-h-[4.75rem]">
           <h2
-            className="mb-0.5 line-clamp-2 text-xs font-semibold sm:mb-1 sm:text-base"
-            style={{ color: '#FFFFFF' }}
+            className="mb-1 line-clamp-2 text-xs font-semibold leading-snug text-white sm:text-[0.95rem]"
           >
             {product.nom}
           </h2>
-
-          {/* Prix avec style spécial */}
           <div
-            className="text-lg font-bold tracking-tight sm:text-2xl"
-            style={{
-              fontFamily: "'Space Grotesk', sans-serif",
-              color: '#FFFFFF',
-            }}
+            className="text-lg font-bold tracking-tight text-white sm:text-2xl"
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             {amount}{' '}
-            <span className="text-[11px] font-medium text-[#888] sm:text-sm">
+            <span className="text-[11px] font-medium text-neutral-500 sm:text-sm">
               {currency}
             </span>
           </div>
         </div>
       </div>
 
-      {/* ---- BOUTONS ACTION (compacts sur mobile, taille confortable à partir de md) ---- */}
-      <div className="grid grid-cols-2 gap-1 px-2 pb-1 sm:gap-1.5 sm:px-4 md:gap-2 md:pb-0">
+      <div className="grid grid-cols-2 gap-2 px-3 pb-2 sm:gap-2 sm:px-4 sm:pb-3 md:gap-2.5">
         {/* Bouton RÉSERVER */}
         <button
           type="button"

@@ -23,7 +23,7 @@ const CATEGORY_PILLS = [
 const SORT_PILLS = [
   { label: 'Prix ↑', value: 'price-asc' as const },
   { label: 'Nouveautés', value: 'newest' as const },
-  { label: 'Coups de ❤️', value: 'popular' as const },
+  { label: 'Coups de cœur', value: 'popular' as const },
 ];
 
 const FilterBar = ({ filters, onFilterChange, maxProductPrice }: FilterBarProps) => {

@@ -1,9 +1,19 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Navbar from '../components/layout/Navbar';
+import ScrollToTop from '../components/layout/ScrollToTop';
+import ShopLayout from '../components/layout/ShopLayout';
+import HomePage from '../pages/client/HomePage';
 import FouillePage from '../pages/client/FouillePage';
+import PaiementReservationPage from '../pages/client/PaiementReservationPage';
+import PaiementCommandePage from '../pages/client/PaiementCommandePage';
+import VendeuseLayout from '../pages/vendeuse/VendeuseLayout';
+import VendeuseDashboardPage from '../pages/vendeuse/VendeuseDashboardPage';
+import VendeuseReservationsPage from '../pages/vendeuse/VendeuseReservationsPage';
+import VendeuseCommandesPage from '../pages/vendeuse/VendeuseCommandesPage';
+import VendeuseLivraisonsPage from '../pages/vendeuse/VendeuseLivraisonsPage';
+import VendeuseLivreursPage from '../pages/vendeuse/VendeuseLivreursPage';
+import VendeuseMediasPage from '../pages/vendeuse/VendeuseMediasPage';
+import VendeusePromotionsPage from '../pages/vendeuse/VendeusePromotionsPage';
 
-// Les autres pages — on les crée plus tard
-// Pour l'instant on met des placeholders
 const CommandePage = () => (
   <div style={{ color: 'white', padding: '40px', textAlign: 'center' }}>
     <h1>Page Commander — À venir</h1>
@@ -24,25 +34,28 @@ const SuiviPage = () => (
 
 const AppRouter = () => {
   return (
-    // BrowserRouter = active le système de routing basé sur l'URL
     <BrowserRouter>
-      {/* La Navbar est en dehors des Routes : elle s'affiche sur TOUTES les pages */}
-      <Navbar />
-
-      {/* Routes = le conteneur de toutes les routes */}
+      <ScrollToTop />
       <Routes>
-        {/* Route principale : "/" → page d'accueil La Fouille */}
-        <Route path="/" element={<FouillePage />} />
+        <Route path="/vendeuse" element={<VendeuseLayout />}>
+          <Route index element={<VendeuseDashboardPage />} />
+          <Route path="reservations" element={<VendeuseReservationsPage />} />
+          <Route path="commandes" element={<VendeuseCommandesPage />} />
+          <Route path="livraisons" element={<VendeuseLivraisonsPage />} />
+          <Route path="livreurs" element={<VendeuseLivreursPage />} />
+          <Route path="medias" element={<VendeuseMediasPage />} />
+          <Route path="promotions" element={<VendeusePromotionsPage />} />
+        </Route>
 
-        {/* Route commande avec l'ID du produit dans l'URL */}
-        {/* :productId = paramètre dynamique (ex: /commander/1, /commander/2) */}
-        <Route path="/commander/:productId" element={<CommandePage />} />
-
-        {/* Route réservation */}
-        <Route path="/reserver/:productId" element={<ReservationPage />} />
-
-        {/* Route suivi commande */}
-        <Route path="/suivi" element={<SuiviPage />} />
+        <Route element={<ShopLayout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/fouille" element={<FouillePage />} />
+          <Route path="/paiement/reservation" element={<PaiementReservationPage />} />
+          <Route path="/paiement/commande" element={<PaiementCommandePage />} />
+          <Route path="/commander/:productId" element={<CommandePage />} />
+          <Route path="/reserver/:productId" element={<ReservationPage />} />
+          <Route path="/suivi" element={<SuiviPage />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );

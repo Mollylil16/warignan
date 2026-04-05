@@ -1,1 +1,0 @@
-// Gestion réservations — à implémenter
