@@ -1,0 +1,21 @@
+# Dépendances
+node_modules/
+
+# Secrets & bases locales
+.env
+.env.local
+*.db
+*.db-journal
+
+# Builds
+dist/
+build/
+
+# Uploads backend
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Logs & OS
+.DS_Store
+Thumbs.db
+*.log

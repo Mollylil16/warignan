@@ -1,36 +1,15 @@
-# WARIGNAN — Friperie ivoirienne
+# Warignan Shop
 
-E-commerce friperie Côte d'Ivoire : catalogue, commandes, réservations, livraisons. Pas de compte client — commande par téléphone/nom. Auth JWT pour vendeuse, admin, livreur.
+Monorepo : **frontend** (Vite + React) et **backend** (Express + Prisma + SQLite).
 
-## Stack
-
-- **Frontend:** React 18, Vite, TypeScript, TailwindCSS, React Query, Zustand
-- **Backend:** NestJS, TypeScript, TypeORM
-- **Base de données:** PostgreSQL 15
-- **Auth:** JWT (VENDEUSE | ADMIN | LIVREUR)
+| Dossier     | Rôle |
+|------------|------|
+| `frontend/` | Interface boutique, espace vendeuse, paiement (démo), suivi |
+| `backend/`  | API REST — voir `backend/README.md` et la section collaborateur ci-dessous |
 
 ## Démarrage rapide
 
-### 1. Base de données
-
-```bash
-docker-compose up -d
-```
-
-PostgreSQL : `localhost:5432` — pgAdmin : `http://localhost:5050`
-
-### 2. Backend
-
-```bash
-cd backend
-cp .env.example .env
-npm install
-npm run start:dev
-```
-
-API : `http://localhost:3000`
-
-### 3. Frontend
+**Frontend**
 
 ```bash
 cd frontend
@@ -38,21 +17,80 @@ npm install
 npm run dev
 ```
 
-App : `http://localhost:5173`
+**Backend**
 
-## Structure
+```bash
+cd backend
+cp .env.example .env
+npm install
+npx prisma db push
+npm run db:seed
+npm run dev
+```
 
-- `frontend/` — React (pages client, vendeuse, livreur, admin)
-- `backend/` — NestJS (auth, users, products, orders, reservations, deliveries, payments, tracking, uploads)
-- `docker-compose.yml` — PostgreSQL + pgAdmin
+Comptes seed backend : `vendeuse@warignan.shop` / `vendeuse123`, `admin@warignan.shop` / `admin123`.
 
-## Rôles
+---
 
-- **Clientes** : pas de compte — fouille (catalogue), commande, réservation, suivi par numéro
-- **Vendeuse** : produits, commandes, réservations, livraisons
-- **Livreur** : livraisons assignées
-- **Admin** : tout + users + stats
+## À faire côté backend (collaborateur)
 
-## Prix
+Cette liste est reprise **intégralement** dans `backend/README.md` pour que tout le monde la voie au même endroit. Détail pédagogique : `backend/docs/EXERCICE_JUNIOR_BACKEND.md`.
 
-Tous les montants en **FCFA** (entiers). Paiement Wave / Orange Money avec preuve (screenshot).
+1. **Livraisons** — Aujourd’hui `GET /api/deliveries` répond **501**. Modèle Prisma `Delivery` seedé mais pas d’API complète. À faire : liste + filtres (statut, date), `PATCH` pour `courierId` / `status`, routes protégées (vendeuse/admin, éventuellement livreur « mes livraisons »).
+
+2. **Réservations** — Aujourd’hui seulement `GET /api/reservations`. À faire : `PATCH /api/reservations/:id` pour `workflow` et/ou `depositStatus`, avec règles métier sur les transitions (ex. pas de passage incohérent `cancelled` → `validated`).
+
+3. **Webhooks paiement (Wave / Orange Money)** — Les routes enregistrent un JSON simplifié **sans vérifier la signature**. À faire : doc fournisseur, validation avec `WAVE_WEBHOOK_SECRET` / `ORANGE_MONEY_WEBHOOK_SECRET`, refus en prod si invalide ; éventuellement body brut (`express.raw`).
+
+4. **Pagination & perf** — Pas de `page` / `limit` sur les listes. À faire : pagination (ou curseur) + éventuellement `select` Prisma pour alléger les réponses.
+
+5. **Médias** — Upload disque local uniquement. À faire : suppression fichier si suppression en base, resize (ex. sharp), S3 / Cloudinary, etc.
+
+6. **Qualité / prod** — Tests (auth, `trackingService`, …), env strict en prod (`JWT_SECRET`, secrets webhooks), PostgreSQL en prod.
+
+**Critères de validation suggérés pour le collaborateur**
+
+- [ ] Au moins une route **livraisons** utile + **auth**.
+- [ ] Au moins une **transition** de réservation gérée côté API.
+- [ ] Une **tentative de vérif webhook** documentée (même en mock).
+- [ ] **README** mis à jour avec ce qui a été ajouté.
+
+---
+
+## Git : pousser le projet sur le dépôt distant
+
+À lancer **à la racine** du repo (`warignan-shop/`), après avoir configuré le remote (GitHub, GitLab, etc.).
+
+```bash
+# Vérifier l’état
+git status
+
+# Ne pas committer les secrets (.env, dev.db, uploads) — déjà dans .gitignore côté backend
+git add .
+git status
+
+# Message de commit explicite
+git commit -m "feat: backend Express/Prisma + roadmap collaborateur dans README"
+
+# Branche principale (adapter si ta branche s'appelle master)
+git branch -M main
+git push -u origin main
+```
+
+**Première fois / nouveau remote**
+
+```bash
+git remote add origin https://github.com/TON_ORG/warignan-shop.git
+git push -u origin main
+```
+
+**Travail en équipe (recommandé pour le collègue)**
+
+```bash
+git checkout -b feat/livraisons-api
+# ... commits ...
+git push -u origin feat/livraisons-api
+# puis ouvrir une Pull Request vers main
+```
+
+Ne jamais committer : `backend/.env`, `backend/dev.db`, `backend/uploads/*` (fichiers uploadés), `node_modules/`.
