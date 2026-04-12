@@ -10,6 +10,8 @@ interface FilterBarProps {
   onFilterChange: (newFilters: Partial<productFilters>) => void;
   // Prix max possible (pour la limite haute du slider)
   maxProductPrice: number;
+  searchQuery: string;
+  onSearchChange: (q: string) => void;
 }
 
 // Configuration des pills de catégorie/tri
@@ -22,11 +24,19 @@ const CATEGORY_PILLS = [
 
 const SORT_PILLS = [
   { label: 'Prix ↑', value: 'price-asc' as const },
+  { label: 'Prix ↓', value: 'price-desc' as const },
   { label: 'Nouveautés', value: 'newest' as const },
+  { label: 'Ancien', value: 'oldest' as const },
   { label: 'Coups de cœur', value: 'popular' as const },
 ];
 
-const FilterBar = ({ filters, onFilterChange, maxProductPrice }: FilterBarProps) => {
+const FilterBar = ({
+  filters,
+  onFilterChange,
+  maxProductPrice,
+  searchQuery,
+  onSearchChange,
+}: FilterBarProps) => {
   return (
     <nav
       className="sticky top-14 z-40 border-b border-[#2A2A2A] px-3 py-2.5 sm:top-16 sm:px-4 sm:py-3"
@@ -34,6 +44,17 @@ const FilterBar = ({ filters, onFilterChange, maxProductPrice }: FilterBarProps)
         background: '#170b00',
       }}
     >
+      <div className="mb-3">
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder="Rechercher une pièce, un code…"
+          className="w-full rounded-full border border-[#2A2A2A] bg-[#121212] px-4 py-2.5 text-sm text-white placeholder:text-neutral-600 focus:border-tiktok-cyan/50 focus:outline-none focus:ring-1 focus:ring-tiktok-cyan/30"
+          aria-label="Recherche catalogue"
+        />
+      </div>
+
       {/* Scroll horizontal pour les pills */}
       {/* overflow-x: auto = scrollable horizontalement */}
       {/* scrollbar-hide = classe Tailwind custom pour cacher la scrollbar */}

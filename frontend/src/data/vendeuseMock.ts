@@ -51,12 +51,16 @@ export interface MockCourier {
   note?: string;
 }
 
+/** Emplacement d’usage côté site (robes, crops, live, bannières). */
+export type MediaGallerySlot = 'robes' | 'crops' | 'live' | 'banners' | 'uncategorized';
+
 export interface MockMediaAsset {
   id: string;
   url: string;
   filename: string;
   isPrimary: boolean;
   context: string;
+  gallery: MediaGallerySlot;
 }
 
 export interface MockPromotion {
@@ -185,8 +189,8 @@ export const mockDeliveries: MockDelivery[] = [
     address: 'Marcory résidentiel, villa 12',
     dateISO: '2026-04-06',
     windowLabel: '10h – 12h',
-    courierId: null,
-    status: 'planned',
+    courierId: 'c1',
+    status: 'assigned',
   },
   {
     id: 'd3',
@@ -207,6 +211,7 @@ export const mockMediaAssets: MockMediaAsset[] = [
     filename: 'robe.webp',
     isPrimary: true,
     context: 'Catalogue — Robes',
+    gallery: 'robes',
   },
   {
     id: 'm2',
@@ -214,6 +219,7 @@ export const mockMediaAssets: MockMediaAsset[] = [
     filename: 'robe3.webp',
     isPrimary: false,
     context: 'Catalogue — Robes',
+    gallery: 'robes',
   },
   {
     id: 'm3',
@@ -221,6 +227,7 @@ export const mockMediaAssets: MockMediaAsset[] = [
     filename: 'croc4.webp',
     isPrimary: false,
     context: 'Catalogue — Crops',
+    gallery: 'crops',
   },
   {
     id: 'm4',
@@ -228,6 +235,7 @@ export const mockMediaAssets: MockMediaAsset[] = [
     filename: 'crocs2.webp',
     isPrimary: false,
     context: 'Catalogue — Crops',
+    gallery: 'crops',
   },
 ];
 

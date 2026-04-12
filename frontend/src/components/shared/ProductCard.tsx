@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Product, ProductStatus } from '../../types';
 import { useCartStore } from '../../stores/cartStore';
 import { formatPriceParts } from '../../utils/formatPrice';
@@ -49,14 +50,23 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
         {/* Code produit en haut à gauche (ex: #R-042) */}
         <div
-          className="absolute left-2 top-2 z-20 px-1.5 py-0.5 text-[10px] font-bold sm:left-4 sm:top-4 sm:px-2 sm:py-1 sm:text-xs"
-          style={{
-            background: '#FFFFFF',
-            color: '#050505',
-            fontFamily: "'Space Grotesk', sans-serif",
-          }}
+          className="absolute left-2 top-2 z-20 flex flex-wrap items-center gap-1 sm:left-4 sm:top-4"
         >
-          {product.code}
+          <div
+            className="px-1.5 py-0.5 text-[10px] font-bold sm:px-2 sm:py-1 sm:text-xs"
+            style={{
+              background: '#FFFFFF',
+              color: '#050505',
+              fontFamily: "'Space Grotesk', sans-serif",
+            }}
+          >
+            {product.code}
+          </div>
+          {product.featured && (
+            <span className="rounded bg-tiktok-pink/95 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-white sm:text-[10px]">
+              Live pick
+            </span>
+          )}
         </div>
 
         {/* Badge de stock (Disponible / Réservé / Dernier !) */}
@@ -120,6 +130,24 @@ const ProductCard = ({ product }: ProductCardProps) => {
         >
           {isUnavailable ? 'Indisponible' : 'Commander'}
         </button>
+      </div>
+
+      <div className="flex justify-center gap-3 px-3 pb-2 text-[10px] font-semibold sm:text-[11px]">
+        <Link
+          to={`/commander/${product.id}`}
+          className="text-tiktok-pink/90 underline-offset-2 hover:underline"
+        >
+          Fiche commande
+        </Link>
+        <span className="text-neutral-700" aria-hidden>
+          |
+        </span>
+        <Link
+          to={`/reserver/${product.id}`}
+          className="text-reserve-purple/90 underline-offset-2 hover:underline"
+        >
+          Fiche réservation
+        </Link>
       </div>
     </article>
   );

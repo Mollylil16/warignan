@@ -144,12 +144,18 @@ const HomePage = () => {
           Entrer dans la fouille
           <ArrowRight className="h-4 w-4 shrink-0" strokeWidth={2.5} aria-hidden />
         </Link>
-        <p className="mt-8">
-          <Link
-            to="/vendeuse"
-            className="text-xs text-neutral-600 underline-offset-2 hover:text-neutral-500 hover:underline"
-          >
-            Espace vendeuse (gestion)
+        <p className="mt-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-neutral-600">
+          <Link to="/suivi" className="underline-offset-2 hover:text-neutral-500 hover:underline">
+            Suivi commande
+          </Link>
+          <Link to="/vendeuse" className="underline-offset-2 hover:text-neutral-500 hover:underline">
+            Espace vendeuse
+          </Link>
+          <Link to="/admin" className="underline-offset-2 hover:text-neutral-500 hover:underline">
+            Admin
+          </Link>
+          <Link to="/livreur" className="underline-offset-2 hover:text-neutral-500 hover:underline">
+            Livreur
           </Link>
         </p>
       </section>

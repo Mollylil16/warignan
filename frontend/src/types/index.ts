@@ -23,7 +23,8 @@ export interface Product {
     createdAt :string;
     imageName : string[];
     stock : number;
-
+    /** Mise en avant pour le tri « Coups de cœur » (souvent calée sur les lives). */
+    featured?: boolean;
 }
 
 export interface productFilters {

@@ -1,0 +1,152 @@
+// Schéma Warignan — ~70 % exploité côté routes ; le reste est pour l’exercice junior.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  client
+  vendeuse
+  admin
+  livreur
+}
+
+enum ProductCategory {
+  robe
+  crop
+}
+
+enum ProductStatus {
+  disponible
+  reserver
+  sold
+}
+
+enum OrderStep {
+  preparation
+  emballage
+  expediee
+  livree
+}
+
+enum ReservationWorkflow {
+  awaiting_deposit
+  awaiting_validation
+  validated
+  cancelled
+}
+
+enum DepositStatus {
+  pending
+  paid
+  failed
+}
+
+enum MediaGallery {
+  robes
+  crops
+  live
+  banners
+  uncategorized
+}
+
+enum DeliveryStatus {
+  planned
+  assigned
+  out
+  done
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  displayName  String
+  role         Role     @default(client)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Product {
+  id          String          @id @default(cuid())
+  code        String          @unique
+  nom         String
+  description String
+  prix        Int
+  category    ProductCategory
+  status      ProductStatus   @default(disponible)
+  imageName   Json
+  stock       Int             @default(0)
+  featured    Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model Order {
+  id           String    @id @default(cuid())
+  reference    String    @unique
+  clientName   String
+  city         String
+  itemsSummary String
+  totalFcfa    Int
+  paidAt       DateTime?
+  step         OrderStep @default(preparation)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Reservation {
+  id              String                @id @default(cuid())
+  reference       String                @unique
+  clientName      String
+  clientPhone     String
+  productsSummary String
+  totalFcfa       Int
+  depositFcfa     Int
+  depositStatus   DepositStatus         @default(pending)
+  workflow        ReservationWorkflow   @default(awaiting_deposit)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+}
+
+/// Événements paiement / tracking (Wave, OM, manuel vendeuse).
+model PaymentEvent {
+  id         String   @id @default(cuid())
+  reference  String
+  flow       String
+  amountFcfa Int
+  provider   String?
+  status     String
+  payload    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([reference])
+}
+
+model MediaAsset {
+  id        String       @id @default(cuid())
+  url       String
+  filename  String
+  gallery   MediaGallery @default(uncategorized)
+  isPrimary Boolean      @default(false)
+  createdAt DateTime     @default(now())
+}
+
+/// Modèle préparé — routes livreur à implémenter par le junior.
+model Delivery {
+  id          String         @id @default(cuid())
+  orderRef    String
+  clientName  String
+  address     String
+  dateISO     String
+  windowLabel String
+  courierId   String?
+  status      DeliveryStatus @default(planned)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}

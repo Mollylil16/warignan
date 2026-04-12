@@ -22,21 +22,48 @@ export function getOrangeMoneyPayBaseUrl(): string {
  * Ajoute montant + référence + type de flux en query string.
  * Si ton lien Wave/OM n’accepte pas ces paramètres, configure une URL fixe et trace la ref autrement (backend).
  */
+export function getAppOrigin(): string {
+  if (typeof window === 'undefined') return '';
+  return window.location.origin;
+}
+
+function clientReturnUrl(
+  status: 'success' | 'cancel',
+  flow: PaymentFlow,
+  reference: string
+): string {
+  const base = getAppOrigin();
+  const q = new URLSearchParams({
+    status,
+    flow,
+    ref: reference,
+  });
+  return `${base}/paiement/retour?${q.toString()}`;
+}
+
 export function buildPaymentRedirectUrl(
   baseUrl: string,
   params: {
     amountFcfa: number;
     reference: string;
     flow: PaymentFlow;
-  }
+  },
+  options?: { appendReturnUrls?: boolean }
 ): string {
   if (!baseUrl) return '';
+
+  const withReturns =
+    Boolean(options?.appendReturnUrls) && typeof window !== 'undefined';
 
   try {
     const u = new URL(baseUrl);
     u.searchParams.set('amount', String(params.amountFcfa));
     u.searchParams.set('ref', params.reference);
     u.searchParams.set('flow', params.flow);
+    if (withReturns) {
+      u.searchParams.set('return_url', clientReturnUrl('success', params.flow, params.reference));
+      u.searchParams.set('cancel_url', clientReturnUrl('cancel', params.flow, params.reference));
+    }
     return u.toString();
   } catch {
     const sep = baseUrl.includes('?') ? '&' : '?';
@@ -45,6 +72,10 @@ export function buildPaymentRedirectUrl(
       ref: params.reference,
       flow: params.flow,
     });
+    if (withReturns) {
+      q.set('return_url', clientReturnUrl('success', params.flow, params.reference));
+      q.set('cancel_url', clientReturnUrl('cancel', params.flow, params.reference));
+    }
     return `${baseUrl}${sep}${q.toString()}`;
   }
 }

@@ -1,38 +1,47 @@
-import express, { Application } from "express";
-import cors from "cors";
-import helmet from "helmet";
-import morgan from "morgan";
-import { json, urlencoded } from "body-parser";
+import path from 'node:path';
+import cors from 'cors';
+import express from 'express';
+import { env } from './config/env.js';
+import { errorHandler } from './middleware/errorHandler.js';
+import authRouter from './routes/auth.js';
+import deliveriesRouter from './routes/deliveries.js';
+import healthRouter from './routes/health.js';
+import mediaRouter from './routes/media.js';
+import ordersRouter from './routes/orders.js';
+import paymentsRouter from './routes/payments.js';
+import productsRouter from './routes/products.js';
+import reservationsRouter from './routes/reservations.js';
+import trackingRouter from './routes/tracking.js';
+import webhooksRouter from './routes/webhooks.js';
 
-import { registerRoutes } from "./routes";
+const app = express();
 
-export function createApp(): Application {
-  const app = express();
+app.use(
+  cors({
+    origin: env.CORS_ORIGIN.split(',').map((s) => s.trim()),
+    credentials: true,
+  })
+);
+app.use(express.json({ limit: '2mb' }));
 
-  app.use(helmet());
-  app.use(
-    cors({
-      origin: "*",
-      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    })
-  );
-  app.use(json());
-  app.use(urlencoded({ extended: true }));
-  app.use(morgan("dev"));
+const uploadRoot = path.resolve(env.UPLOAD_DIR);
+app.use('/uploads', express.static(uploadRoot));
 
-  registerRoutes(app);
+app.use('/api/health', healthRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/products', productsRouter);
+app.use('/api/orders', ordersRouter);
+app.use('/api/reservations', reservationsRouter);
+app.use('/api/tracking', trackingRouter);
+app.use('/api/webhooks', webhooksRouter);
+app.use('/api/payments', paymentsRouter);
+app.use('/api/media', mediaRouter);
+app.use('/api/deliveries', deliveriesRouter);
 
-  app.get("/health", (_req, res) => {
-    res.json({ status: "ok", service: "warignan-backend" });
-  });
+app.use((_req, res) => {
+  res.status(404).json({ error: 'Route introuvable' });
+});
 
-  app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    console.error(err);
-    res.status(err.status || 500).json({
-      message: err.message || "Internal server error",
-    });
-  });
+app.use(errorHandler);
 
-  return app;
-}
-
+export default app;

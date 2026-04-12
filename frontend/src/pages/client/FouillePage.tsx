@@ -5,12 +5,15 @@ import { useState, useMemo } from 'react';
 // useMemo = pour mémoriser un calcul coûteux (éviter de recalculer à chaque rendu)
 
 import { productFilters, ProductCategory } from '../../types';
-import { mockProducts } from '../../data/mockProducts';
+import { useProducts } from '../../hooks/useProducts';
 import { Search } from 'lucide-react';
 import FilterBar from '../../components/shared/StatusBadge';
 import ProductCard from '../../components/shared/ProductCard';
 
 const FouillePage = () => {
+  const { data: catalog } = useProducts();
+  const [searchQuery, setSearchQuery] = useState('');
+
   // ---- ÉTAT DES FILTRES ----
   // useState retourne [valeur actuelle, fonction pour la modifier]
   const [filters, setFilters] = useState<productFilters>({
@@ -30,14 +33,14 @@ const FouillePage = () => {
 
   // ---- PRIX MAX PARMI TOUS LES PRODUITS ----
   // Pour définir la limite haute du slider
-  const maxProductPrice = Math.max(...mockProducts.map((p) => p.prix)); // 15500
+  const maxProductPrice = Math.max(...catalog.map((p) => p.prix), 1000);
 
   // ---- FILTRAGE ET TRI DES PRODUITS ----
-  // useMemo = ce calcul ne se refait QUE si filters ou mockProducts changent
+  // useMemo = ce calcul ne se refait QUE si filters ou le catalogue changent
   // Sinon React réutilise le résultat précédent (optimisation)
   const filteredProducts = useMemo(() => {
     // Étape 1 : copier le tableau (pour ne pas modifier l'original)
-    let result = [...mockProducts];
+    let result = [...catalog];
 
     // Étape 2 : filtrer par catégorie
     if (filters.category !== 'ALL') {
@@ -48,22 +51,44 @@ const FouillePage = () => {
     // Étape 3 : filtrer par prix max
     result = result.filter((p) => p.prix <= filters.maxPrice);
 
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      result = result.filter(
+        (p) =>
+          p.nom.toLowerCase().includes(q) ||
+          p.code.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q)
+      );
+    }
+
     // Étape 4 : trier selon le choix
     if (filters.sortBy === 'price-asc') {
-      // sort() avec comparateur → ordre croissant de prix
       result.sort((a, b) => a.prix - b.prix);
+    } else if (filters.sortBy === 'price-desc') {
+      result.sort((a, b) => b.prix - a.prix);
     } else if (filters.sortBy === 'newest') {
-      // Tri par date décroissante (plus récent en premier)
-      // new Date() convertit la string ISO en objet Date comparable
       result.sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
+    } else if (filters.sortBy === 'oldest') {
+      result.sort(
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+    } else if (filters.sortBy === 'popular') {
+      result.sort((a, b) => {
+        const fa = a.featured ? 1 : 0;
+        const fb = b.featured ? 1 : 0;
+        if (fb !== fa) return fb - fa;
+        return (
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      });
     }
-    // 'popular' → on garde l'ordre par défaut (on n'a pas de données de popularité)
 
     return result;
-  }, [filters]); // Dépendances : recalculer si filters change
+  }, [filters, catalog, searchQuery]);
 
   return (
     <>
@@ -71,7 +96,17 @@ const FouillePage = () => {
         filters={filters}
         onFilterChange={handleFilterChange}
         maxProductPrice={maxProductPrice}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
       />
+
+      <div className="mx-auto max-w-6xl px-3 pt-3 sm:px-4 lg:px-6">
+        <p className="text-xs text-neutral-500">
+          <span className="font-semibold text-neutral-400">{filteredProducts.length}</span> pièce
+          {filteredProducts.length > 1 ? 's' : ''}
+          {searchQuery.trim() ? ' — filtrées par ta recherche' : ''}
+        </p>
+      </div>
 
       <main
         id="feed"

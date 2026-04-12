@@ -17,17 +17,27 @@ const Navbar = () => {
         WebkitBackdropFilter: 'blur(10px)',
       }}
     >
-      <Link
-        to="/"
-        className="text-2xl sm:text-[28px]"
-        style={{
-          fontFamily: 'cursive',
-          fontWeight: 900,
-          color: '#BA4F64',
-        }}
-      >
-        WARIGNAN
-      </Link>
+      <div className="flex min-w-0 flex-1 items-center gap-6">
+        <Link
+          to="/"
+          className="shrink-0 text-2xl sm:text-[28px]"
+          style={{
+            fontFamily: 'cursive',
+            fontWeight: 900,
+            color: '#BA4F64',
+          }}
+        >
+          WARIGNAN
+        </Link>
+        <nav className="hidden min-w-0 items-center gap-4 text-sm font-semibold text-neutral-700 sm:flex">
+          <Link to="/fouille" className="hover:text-tiktok-pink">
+            Fouille
+          </Link>
+          <Link to="/suivi" className="hover:text-tiktok-pink">
+            Suivi
+          </Link>
+        </nav>
+      </div>
 
       <button
         type="button"

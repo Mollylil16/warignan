@@ -23,6 +23,7 @@ export const mockProducts: Product[] = [
     stock: 1,
     imageName: [WA, '/images/robe.webp'],
     createdAt: '2024-01-15T10:00:00Z',
+    featured: true,
   },
   {
     id: '2',
@@ -35,6 +36,7 @@ export const mockProducts: Product[] = [
     stock: 3,
     imageName: ['/images/croc4.webp', '/images/croc5.jpg'],
     createdAt: '2024-01-16T10:00:00Z',
+    featured: true,
   },
   {
     id: '3',
@@ -71,6 +73,7 @@ export const mockProducts: Product[] = [
     stock: 2,
     imageName: ['/images/robe5.webp', '/images/robe6.avif'],
     createdAt: '2024-01-18T10:00:00Z',
+    featured: true,
   },
   {
     id: '6',
@@ -107,6 +110,7 @@ export const mockProducts: Product[] = [
     stock: 2,
     imageName: ['/images/robe2.jpg', '/images/robe4.jpg'],
     createdAt: '2024-01-20T10:00:00Z',
+    featured: true,
   },
   {
     id: '9',

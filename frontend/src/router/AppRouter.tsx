@@ -5,6 +5,10 @@ import HomePage from '../pages/client/HomePage';
 import FouillePage from '../pages/client/FouillePage';
 import PaiementReservationPage from '../pages/client/PaiementReservationPage';
 import PaiementCommandePage from '../pages/client/PaiementCommandePage';
+import PaiementRetourPage from '../pages/client/PaiementRetourPage';
+import CommandePage from '../pages/client/CommandePage';
+import ReservationPage from '../pages/client/ReservationPage';
+import SuiviCommandePage from '../pages/client/SuiviCommandePage';
 import VendeuseLayout from '../pages/vendeuse/VendeuseLayout';
 import VendeuseDashboardPage from '../pages/vendeuse/VendeuseDashboardPage';
 import VendeuseReservationsPage from '../pages/vendeuse/VendeuseReservationsPage';
@@ -13,24 +17,12 @@ import VendeuseLivraisonsPage from '../pages/vendeuse/VendeuseLivraisonsPage';
 import VendeuseLivreursPage from '../pages/vendeuse/VendeuseLivreursPage';
 import VendeuseMediasPage from '../pages/vendeuse/VendeuseMediasPage';
 import VendeusePromotionsPage from '../pages/vendeuse/VendeusePromotionsPage';
-
-const CommandePage = () => (
-  <div style={{ color: 'white', padding: '40px', textAlign: 'center' }}>
-    <h1>Page Commander — À venir</h1>
-  </div>
-);
-
-const ReservationPage = () => (
-  <div style={{ color: 'white', padding: '40px', textAlign: 'center' }}>
-    <h1>Page Réservation — À venir</h1>
-  </div>
-);
-
-const SuiviPage = () => (
-  <div style={{ color: 'white', padding: '40px', textAlign: 'center' }}>
-    <h1>Page Suivi — À venir</h1>
-  </div>
-);
+import AdminLayout from '../pages/admin/AdminLayout';
+import StatsPage from '../pages/admin/StatsPage';
+import AllOrdersPage from '../pages/admin/AllOrdersPage';
+import UsersPage from '../pages/admin/UsersPage';
+import LivreurLayout from '../pages/livreur/LivreurLayout';
+import MesLivraisonsPage from '../pages/livreur/MesLivraisonsPage';
 
 const AppRouter = () => {
   return (
@@ -47,14 +39,25 @@ const AppRouter = () => {
           <Route path="promotions" element={<VendeusePromotionsPage />} />
         </Route>
 
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<StatsPage />} />
+          <Route path="commandes" element={<AllOrdersPage />} />
+          <Route path="utilisateurs" element={<UsersPage />} />
+        </Route>
+
+        <Route path="/livreur" element={<LivreurLayout />}>
+          <Route index element={<MesLivraisonsPage />} />
+        </Route>
+
         <Route element={<ShopLayout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/fouille" element={<FouillePage />} />
           <Route path="/paiement/reservation" element={<PaiementReservationPage />} />
           <Route path="/paiement/commande" element={<PaiementCommandePage />} />
+          <Route path="/paiement/retour" element={<PaiementRetourPage />} />
           <Route path="/commander/:productId" element={<CommandePage />} />
           <Route path="/reserver/:productId" element={<ReservationPage />} />
-          <Route path="/suivi" element={<SuiviPage />} />
+          <Route path="/suivi" element={<SuiviCommandePage />} />
         </Route>
       </Routes>
     </BrowserRouter>
