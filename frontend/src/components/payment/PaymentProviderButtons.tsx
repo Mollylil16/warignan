@@ -7,16 +7,13 @@ import {
   redirectToExternalPayment,
   type PaymentFlow,
 } from '../../config/paymentLinks';
-import {
-  markDemoAckVendeuse,
-  markDemoRedirect,
-  saveDemoPaymentRef,
-} from '../../utils/demoPaymentRefs';
 
 interface PaymentProviderButtonsProps {
   amountFcfa: number;
   flow: PaymentFlow;
   disabled?: boolean;
+  /** Si fourni (ex. après checkout API), utilisé pour Wave / OM et le suivi. */
+  reference?: string | null;
 }
 
 function makeReference(flow: PaymentFlow): string {
@@ -29,8 +26,10 @@ const PaymentProviderButtons = ({
   amountFcfa,
   flow,
   disabled,
+  reference: referenceProp,
 }: PaymentProviderButtonsProps) => {
-  const reference = useMemo(() => makeReference(flow), [flow, amountFcfa]);
+  const fallbackRef = useMemo(() => makeReference(flow), [flow]);
+  const reference = (referenceProp?.trim() ? referenceProp.trim() : fallbackRef).toUpperCase();
   const [copied, setCopied] = useState(false);
 
   const waveBase = getWavePayBaseUrl();
@@ -45,7 +44,6 @@ const PaymentProviderButtons = ({
       );
       return;
     }
-    markDemoRedirect(reference, flow, amountFcfa);
     redirectToExternalPayment(
       buildPaymentRedirectUrl(
         waveBase,
@@ -62,7 +60,6 @@ const PaymentProviderButtons = ({
       );
       return;
     }
-    markDemoRedirect(reference, flow, amountFcfa);
     redirectToExternalPayment(
       buildPaymentRedirectUrl(
         omBase,
@@ -86,7 +83,7 @@ const PaymentProviderButtons = ({
     <div className="space-y-3">
       <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
         <p className="text-center text-[11px] text-neutral-500">
-          Référence (conserve-la pour le suivi)&nbsp;:
+          Référence (identique sur ton reçu et la page Suivi)&nbsp;:
         </p>
         <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/40 px-3 py-1.5">
           <span className="font-mono text-xs text-neutral-200">{reference}</span>
@@ -105,10 +102,10 @@ const PaymentProviderButtons = ({
         </div>
       </div>
       <p className="text-center text-[10px] text-neutral-600">
-        Les liens Wave / OM incluent des URLs de retour vers ce site (paramètres{' '}
+        Les liens peuvent inclure des URLs de retour (
         <span className="font-mono text-neutral-500">return_url</span> /{' '}
-        <span className="font-mono text-neutral-500">cancel_url</span>) lorsque c’est supporté par
-        ton intégration.
+        <span className="font-mono text-neutral-500">cancel_url</span>) selon ton intégration Wave /
+        Orange Money.
       </p>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -138,35 +135,6 @@ const PaymentProviderButtons = ({
               : 'Orange Money : ajoute VITE_ORANGE_MONEY_PAY_URL pour activer ce bouton.'}
         </p>
       )}
-
-      <button
-        type="button"
-        disabled={disabled || amountFcfa <= 0}
-        onClick={() => {
-          saveDemoPaymentRef({ reference, flow, amountFcfa });
-          window.alert(
-            'Référence enregistrée sur cet appareil. Consulte la page Suivi pour le statut.'
-          );
-        }}
-        className="w-full rounded-lg border border-white/15 py-2.5 text-xs font-semibold text-neutral-400 transition hover:border-tiktok-cyan/40 hover:text-tiktok-cyan disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        Enregistrer pour le suivi (sans payer)
-      </button>
-
-      <button
-        type="button"
-        disabled={disabled || amountFcfa <= 0}
-        onClick={() => {
-          saveDemoPaymentRef({ reference, flow, amountFcfa });
-          markDemoAckVendeuse(reference);
-          window.alert(
-            'Simulation : la vendeuse a validé ce paiement. Actualise le Suivi avec la même référence.'
-          );
-        }}
-        className="w-full rounded-lg border border-reserve-purple/40 bg-reserve-purple/10 py-2.5 text-xs font-semibold text-reserve-purple transition hover:bg-reserve-purple/20 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        Simuler validation vendeuse (démo)
-      </button>
     </div>
   );
 };

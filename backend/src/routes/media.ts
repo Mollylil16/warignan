@@ -2,10 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Router } from 'express';
 import multer from 'multer';
+import sharp from 'sharp';
 import { z } from 'zod';
 import { env } from '../config/env.js';
 import { prisma } from '../lib/prisma.js';
+import { listMeta, paginationQuerySchema, resolvePagination } from '../lib/pagination.js';
 import { requireAuth, requireRoles } from '../middleware/auth.js';
+import { HttpError } from '../middleware/errorHandler.js';
 
 const router = Router();
 
@@ -34,10 +37,27 @@ const upload = multer({
   },
 });
 
-/**
- * Upload local + enregistrement DB — ~70 %.
- * EXERCICE_JUNIOR : redimensionnement serveur, S3, suppression fichier orphelin, droits par galerie.
- */
+async function maybeResizeImage(filePath: string) {
+  try {
+    const meta = await sharp(filePath).metadata();
+    if (!meta.width || meta.width <= 1920) return;
+    const tmp = `${filePath}.resize-tmp`;
+    await sharp(filePath)
+      .resize({ width: 1920, withoutEnlargement: true })
+      .toFile(tmp);
+    fs.renameSync(tmp, filePath);
+  } catch {
+    /* conserver le fichier original */
+  }
+}
+
+function diskPathFromPublicUrl(url: string): string | null {
+  if (!url.startsWith('/uploads/')) return null;
+  const name = url.slice('/uploads/'.length);
+  if (!name || name.includes('..') || path.isAbsolute(name)) return null;
+  return path.join(uploadRoot, name);
+}
+
 router.post(
   '/',
   requireAuth,
@@ -62,6 +82,9 @@ router.post(
         })
         .parse(req.body);
 
+      const absPath = path.join(uploadRoot, req.file.filename);
+      await maybeResizeImage(absPath);
+
       const publicUrl = `/uploads/${req.file.filename}`;
       const asset = await prisma.mediaAsset.create({
         data: {
@@ -78,13 +101,42 @@ router.post(
   }
 );
 
-router.get('/', requireAuth, requireRoles('vendeuse', 'admin'), async (_req, res, next) => {
+router.get('/', requireAuth, requireRoles('vendeuse', 'admin'), async (req, res, next) => {
   try {
-    const items = await prisma.mediaAsset.findMany({ orderBy: { createdAt: 'desc' } });
-    res.json({ data: items });
+    const q = paginationQuerySchema.parse(req.query);
+    const { page, limit, skip } = resolvePagination(q);
+    const [items, total] = await Promise.all([
+      prisma.mediaAsset.findMany({ orderBy: { createdAt: 'desc' }, skip, take: limit }),
+      prisma.mediaAsset.count(),
+    ]);
+    res.json({ data: items, meta: listMeta(page, limit, total) });
   } catch (e) {
     next(e);
   }
 });
+
+router.delete(
+  '/:id',
+  requireAuth,
+  requireRoles('vendeuse', 'admin'),
+  async (req, res, next) => {
+    try {
+      const asset = await prisma.mediaAsset.findUnique({ where: { id: req.params.id } });
+      if (!asset) throw new HttpError(404, 'Média introuvable');
+      const diskPath = diskPathFromPublicUrl(asset.url);
+      if (diskPath && fs.existsSync(diskPath)) {
+        try {
+          fs.unlinkSync(diskPath);
+        } catch {
+          /* fichier déjà absent */
+        }
+      }
+      await prisma.mediaAsset.delete({ where: { id: asset.id } });
+      res.status(204).send();
+    } catch (e) {
+      next(e);
+    }
+  }
+);
 
 export default router;

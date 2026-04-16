@@ -1,19 +1,30 @@
-import { useMemo } from 'react';
-import { mockDeliveries, type MockDelivery } from '../data/vendeuseMock';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../services/api';
+import { useAuthStore } from '../store/authStore';
 
-export interface UseDeliveriesResult {
-  data: MockDelivery[];
-  isLoading: boolean;
-  error: Error | null;
-}
+export type DeliveryRow = {
+  id: string;
+  orderRef: string;
+  clientName: string;
+  address: string;
+  dateISO: string;
+  windowLabel: string;
+  courierId: string | null;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
-export function useDeliveries(): UseDeliveriesResult {
-  return useMemo(
-    () => ({
-      data: mockDeliveries,
-      isLoading: false,
-      error: null,
-    }),
-    []
-  );
+export function useDeliveriesList(params?: { status?: string; dateISO?: string }) {
+  const token = useAuthStore((s) => s.token);
+  return useQuery({
+    queryKey: ['deliveries', token, params?.status, params?.dateISO],
+    queryFn: async () => {
+      const { data } = await api.get<{ data: DeliveryRow[] }>('/deliveries', {
+        params: { page: 1, limit: 500, ...params },
+      });
+      return data.data;
+    },
+    enabled: Boolean(token),
+  });
 }

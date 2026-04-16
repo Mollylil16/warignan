@@ -10,6 +10,8 @@ import {
   type CartLine,
 } from '../../stores/cartStore';
 import { ACOMPTE_RESERVATION_RATIO, reservationDepositFcfa } from '../../constants/payments';
+import { quotePromotion } from '../../services/checkoutApi';
+import { apiErrorMessage } from '../../services/api';
 import { formatPrice } from '../../utils/formatPrice';
 
 const LineRow = ({
@@ -92,6 +94,8 @@ const LineRow = ({
 const CartDrawer = () => {
   const navigate = useNavigate();
   const [mounted, setMounted] = useState(false);
+  const [promoBusy, setPromoBusy] = useState(false);
+  const [promoErr, setPromoErr] = useState<string | null>(null);
 
   const open = useCartStore((s) => s.cartDrawerOpen);
   const tab = useCartStore((s) => s.cartDrawerTab);
@@ -107,12 +111,30 @@ const CartDrawer = () => {
   const removeFromReserve = useCartStore((s) => s.removeFromReserve);
   const removeFromOrder = useCartStore((s) => s.removeFromOrder);
 
+  const reservePromoCode = useCartStore((s) => s.reservePromoCode);
+  const orderPromoCode = useCartStore((s) => s.orderPromoCode);
+  const reserveDiscountFcfa = useCartStore((s) => s.reserveDiscountFcfa);
+  const orderDiscountFcfa = useCartStore((s) => s.orderDiscountFcfa);
+  const reserveQuotedTotalFcfa = useCartStore((s) => s.reserveQuotedTotalFcfa);
+  const orderQuotedTotalFcfa = useCartStore((s) => s.orderQuotedTotalFcfa);
+  const setReservePromoCode = useCartStore((s) => s.setReservePromoCode);
+  const setOrderPromoCode = useCartStore((s) => s.setOrderPromoCode);
+  const setReservePromoQuote = useCartStore((s) => s.setReservePromoQuote);
+  const setOrderPromoQuote = useCartStore((s) => s.setOrderPromoQuote);
+  const clearReservePromo = useCartStore((s) => s.clearReservePromo);
+  const clearOrderPromo = useCartStore((s) => s.clearOrderPromo);
+
   const reserveSub = subtotalLines(reserveLines);
   const orderSub = subtotalLines(orderLines);
   const reserveCount = countItems(reserveLines);
   const orderCount = countItems(orderLines);
 
-  const acompteReserve = reservationDepositFcfa(reserveSub);
+  const reserveTotal = reserveQuotedTotalFcfa ?? reserveSub;
+  const orderTotal = orderQuotedTotalFcfa ?? orderSub;
+  const reserveDiscount = reserveQuotedTotalFcfa == null ? 0 : reserveDiscountFcfa;
+  const orderDiscount = orderQuotedTotalFcfa == null ? 0 : orderDiscountFcfa;
+
+  const acompteReserve = reservationDepositFcfa(reserveTotal);
 
   useEffect(() => {
     setMounted(true);
@@ -120,6 +142,43 @@ const CartDrawer = () => {
 
   const lines = tab === 'reserve' ? reserveLines : orderLines;
   const sub = tab === 'reserve' ? reserveSub : orderSub;
+  const discount = tab === 'reserve' ? reserveDiscount : orderDiscount;
+  const total = tab === 'reserve' ? reserveTotal : orderTotal;
+  const promoCode = tab === 'reserve' ? reservePromoCode : orderPromoCode;
+
+  const applyPromo = async () => {
+    setPromoErr(null);
+    if (lines.length === 0) return;
+    const code = promoCode.trim();
+    if (!code) {
+      tab === 'reserve' ? clearReservePromo() : clearOrderPromo();
+      return;
+    }
+    setPromoBusy(true);
+    try {
+      const q = await quotePromotion({ code, subtotalFcfa: sub });
+      if (!q.promoCode) {
+        tab === 'reserve' ? clearReservePromo() : clearOrderPromo();
+      } else if (tab === 'reserve') {
+        setReservePromoQuote({
+          promoCode: q.promoCode,
+          discountFcfa: q.discountFcfa,
+          totalFcfa: q.totalFcfa,
+        });
+      } else {
+        setOrderPromoQuote({
+          promoCode: q.promoCode,
+          discountFcfa: q.discountFcfa,
+          totalFcfa: q.totalFcfa,
+        });
+      }
+    } catch (e) {
+      setPromoErr(apiErrorMessage(e, 'Code promo invalide ou expiré.'));
+      tab === 'reserve' ? clearReservePromo() : clearOrderPromo();
+    } finally {
+      setPromoBusy(false);
+    }
+  };
 
   const goPaiementReservation = () => {
     closeCart();
@@ -258,10 +317,60 @@ const CartDrawer = () => {
               </span>
               <span className="font-semibold text-white">{formatPrice(sub)}</span>
             </div>
+
+            {lines.length > 0 && (
+              <div className="space-y-2 border-t border-white/10 pt-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    value={promoCode}
+                    onChange={(e) =>
+                      tab === 'reserve'
+                        ? setReservePromoCode(e.target.value)
+                        : setOrderPromoCode(e.target.value)
+                    }
+                    className="h-10 flex-1 rounded-lg border border-white/10 bg-black px-3 text-sm text-white"
+                    placeholder="Code promo (optionnel)"
+                  />
+                  <button
+                    type="button"
+                    disabled={promoBusy}
+                    onClick={() => void applyPromo()}
+                    className="h-10 rounded-lg border border-white/15 px-4 text-sm font-semibold text-neutral-300 hover:bg-white/5 hover:text-white disabled:opacity-50"
+                  >
+                    {promoBusy ? '…' : 'Appliquer'}
+                  </button>
+                  {(promoCode.trim() || discount > 0) && (
+                    <button
+                      type="button"
+                      disabled={promoBusy}
+                      onClick={() => {
+                        setPromoErr(null);
+                        tab === 'reserve' ? clearReservePromo() : clearOrderPromo();
+                      }}
+                      className="h-10 rounded-lg border border-white/10 px-3 text-xs font-semibold text-neutral-500 hover:bg-white/5 hover:text-neutral-300 disabled:opacity-50"
+                    >
+                      Retirer
+                    </button>
+                  )}
+                </div>
+                {promoErr && <p className="text-xs text-red-400">{promoErr}</p>}
+                {discount > 0 && (
+                  <div className="flex justify-between text-sm text-neutral-400">
+                    <span>Remise</span>
+                    <span className="font-semibold text-white">- {formatPrice(discount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-base font-bold text-white">
+                  <span>Total</span>
+                  <span>{formatPrice(total)}</span>
+                </div>
+              </div>
+            )}
+
             <p className="text-xs text-neutral-600">
               Total général (les deux onglets) :{' '}
               <span className="font-medium text-neutral-400">
-                {formatPrice(reserveSub + orderSub)}
+                {formatPrice(reserveTotal + orderTotal)}
               </span>
             </p>
 

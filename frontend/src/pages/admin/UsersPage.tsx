@@ -1,18 +1,42 @@
-import { mockAdminUsers } from '../../data/adminMock';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../../services/api';
+import { useAuthStore } from '../../store/authStore';
 
-const roleLabel: Record<(typeof mockAdminUsers)[0]['role'], string> = {
+type UserRow = {
+  id: string;
+  email: string;
+  displayName: string;
+  role: string;
+  createdAt: string;
+};
+
+const roleLabel: Record<string, string> = {
   admin: 'Administrateur',
   vendeuse: 'Vendeuse',
   livreur: 'Livreur',
+  client: 'Cliente',
 };
 
 const UsersPage = () => {
+  const token = useAuthStore((s) => s.token);
+  const q = useQuery({
+    queryKey: ['admin', 'users', token],
+    queryFn: async () => {
+      const { data } = await api.get<{ data: UserRow[] }>('/users');
+      return data.data;
+    },
+    enabled: Boolean(token),
+  });
+
   return (
     <div className="max-w-4xl">
       <h1 className="mb-2 text-2xl font-bold text-white">Utilisateurs</h1>
-      <p className="mb-8 text-sm text-neutral-500">
-        Comptes internes (démo). Authentification et CRUD à brancher sur le backend.
-      </p>
+      <p className="mb-8 text-sm text-neutral-500">Liste des comptes enregistrés (API).</p>
+
+      {q.error && (
+        <p className="mb-4 text-sm text-red-300">{String(q.error)}</p>
+      )}
+      {q.isPending && <p className="mb-4 text-sm text-neutral-500">Chargement…</p>}
 
       <div className="overflow-x-auto rounded-xl border border-white/10">
         <table className="w-full min-w-[560px] text-left text-sm">
@@ -21,27 +45,17 @@ const UsersPage = () => {
               <th className="px-4 py-3 font-semibold">Nom</th>
               <th className="px-4 py-3 font-semibold">Email</th>
               <th className="px-4 py-3 font-semibold">Rôle</th>
-              <th className="px-4 py-3 font-semibold">Statut</th>
-              <th className="px-4 py-3 font-semibold">Dernière connexion</th>
+              <th className="px-4 py-3 font-semibold">Création</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5 bg-[#111]">
-            {mockAdminUsers.map((u) => (
+            {(q.data ?? []).map((u) => (
               <tr key={u.id} className="text-neutral-300">
                 <td className="px-4 py-3 font-medium text-white">{u.displayName}</td>
                 <td className="px-4 py-3 font-mono text-xs text-neutral-400">{u.email}</td>
-                <td className="px-4 py-3">{roleLabel[u.role]}</td>
-                <td className="px-4 py-3">
-                  <span
-                    className={
-                      u.active ? 'text-status-green' : 'text-neutral-600'
-                    }
-                  >
-                    {u.active ? 'Actif' : 'Inactif'}
-                  </span>
-                </td>
+                <td className="px-4 py-3">{roleLabel[u.role] ?? u.role}</td>
                 <td className="px-4 py-3 text-xs text-neutral-500">
-                  {new Date(u.lastLogin).toLocaleString('fr-FR', {
+                  {new Date(u.createdAt).toLocaleString('fr-FR', {
                     dateStyle: 'short',
                     timeStyle: 'short',
                   })}

@@ -1,30 +1,24 @@
-import { useCallback, useMemo, useState } from 'react';
-import {
-  resolveClientTracking,
-  type ClientTrackingResult,
-} from '../services/clientTracking';
+import { useQuery } from '@tanstack/react-query';
+import type { ClientTrackingResult } from '../types/tracking';
+import { resolveTrackingFromApi } from '../services/trackingClient';
 
-/**
- * Recherche suivi + action « Synchroniser » (relecture locale ; remplacera un fetch API).
- */
 export function useClientTracking(submittedRef: string | null) {
-  const [syncToken, setSyncToken] = useState(0);
-  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
+  const q = useQuery({
+    queryKey: ['tracking', submittedRef],
+    queryFn: (): Promise<ClientTrackingResult> => resolveTrackingFromApi(submittedRef!),
+    enabled: Boolean(submittedRef?.trim()),
+    retry: false,
+  });
 
-  const result: ClientTrackingResult | null = useMemo(() => {
-    if (!submittedRef?.trim()) return null;
-    return resolveClientTracking(submittedRef);
-  }, [submittedRef, syncToken]);
+  const result: ClientTrackingResult | null =
+    !submittedRef?.trim() || q.isPending ? null : (q.data ?? null);
 
-  const refresh = useCallback(() => {
-    setIsSyncing(true);
-    window.setTimeout(() => {
-      setSyncToken((t) => t + 1);
-      setLastSyncedAt(new Date());
-      setIsSyncing(false);
-    }, 450);
-  }, []);
-
-  return { result, refresh, lastSyncedAt, isSyncing };
+  return {
+    result,
+    refresh: () => void q.refetch(),
+    lastSyncedAt: q.dataUpdatedAt ? new Date(q.dataUpdatedAt) : null,
+    isSyncing: q.isFetching,
+    fetchError: q.error instanceof Error ? q.error : null,
+    isPending: q.isPending,
+  };
 }

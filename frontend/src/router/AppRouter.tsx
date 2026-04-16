@@ -16,6 +16,7 @@ import VendeuseCommandesPage from '../pages/vendeuse/VendeuseCommandesPage';
 import VendeuseLivraisonsPage from '../pages/vendeuse/VendeuseLivraisonsPage';
 import VendeuseLivreursPage from '../pages/vendeuse/VendeuseLivreursPage';
 import VendeuseMediasPage from '../pages/vendeuse/VendeuseMediasPage';
+import VendeusePaiementsPage from '../pages/vendeuse/VendeusePaiementsPage';
 import VendeusePromotionsPage from '../pages/vendeuse/VendeusePromotionsPage';
 import AdminLayout from '../pages/admin/AdminLayout';
 import StatsPage from '../pages/admin/StatsPage';
@@ -23,29 +24,52 @@ import AllOrdersPage from '../pages/admin/AllOrdersPage';
 import UsersPage from '../pages/admin/UsersPage';
 import LivreurLayout from '../pages/livreur/LivreurLayout';
 import MesLivraisonsPage from '../pages/livreur/MesLivraisonsPage';
+import StaffLoginGate from '../components/staff/StaffLoginGate';
 
 const AppRouter = () => {
   return (
     <BrowserRouter>
       <ScrollToTop />
       <Routes>
-        <Route path="/vendeuse" element={<VendeuseLayout />}>
+        <Route
+          path="/vendeuse"
+          element={
+            <StaffLoginGate title="Espace vendeuse" allowedRoles={['vendeuse', 'admin']}>
+              <VendeuseLayout />
+            </StaffLoginGate>
+          }
+        >
           <Route index element={<VendeuseDashboardPage />} />
           <Route path="reservations" element={<VendeuseReservationsPage />} />
           <Route path="commandes" element={<VendeuseCommandesPage />} />
+          <Route path="paiements" element={<VendeusePaiementsPage />} />
           <Route path="livraisons" element={<VendeuseLivraisonsPage />} />
           <Route path="livreurs" element={<VendeuseLivreursPage />} />
           <Route path="medias" element={<VendeuseMediasPage />} />
           <Route path="promotions" element={<VendeusePromotionsPage />} />
         </Route>
 
-        <Route path="/admin" element={<AdminLayout />}>
+        <Route
+          path="/admin"
+          element={
+            <StaffLoginGate title="Administration" allowedRoles={['admin']}>
+              <AdminLayout />
+            </StaffLoginGate>
+          }
+        >
           <Route index element={<StatsPage />} />
           <Route path="commandes" element={<AllOrdersPage />} />
           <Route path="utilisateurs" element={<UsersPage />} />
         </Route>
 
-        <Route path="/livreur" element={<LivreurLayout />}>
+        <Route
+          path="/livreur"
+          element={
+            <StaffLoginGate title="Espace livreur" allowedRoles={['livreur']}>
+              <LivreurLayout />
+            </StaffLoginGate>
+          }
+        >
           <Route index element={<MesLivraisonsPage />} />
         </Route>
 

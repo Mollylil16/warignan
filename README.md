@@ -30,6 +30,11 @@ npm run dev
 
 Comptes seed backend : `vendeuse@warignan.shop` / `vendeuse123`, `admin@warignan.shop` / `admin123`.
 
+## Promotions (prod)
+
+- **Public** : `GET /api/promotions/active` (bannière boutique), `POST /api/promotions/quote` (simulation d’un code).
+- **Checkout** : les pages paiement envoient `subtotalFcfa` et un `promoCode` optionnel ; **le serveur** calcule la remise et le total.
+
 ---
 
 ## À faire côté backend (collaborateur)

@@ -1,12 +1,10 @@
-import { useCallback, useMemo, useState, type ChangeEvent } from 'react';
-import { FolderOpen, ImagePlus, Scissors, Star, Trash2 } from 'lucide-react';
+import { type ChangeEvent, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { FolderOpen, ImagePlus, Trash2 } from 'lucide-react';
 import PageHeader from '../../components/vendeuse/PageHeader';
-import MediaCropModal from '../../components/vendeuse/MediaCropModal';
-import {
-  useMediaLibraryStore,
-  type MediaLibraryItem,
-} from '../../stores/mediaLibraryStore';
-import type { MediaGallerySlot } from '../../data/vendeuseMock';
+import type { MediaGallerySlot } from '../../types/domain';
+import { api } from '../../services/api';
+import { absoluteMediaUrl } from '../../utils/mediaUrl';
 
 const GALLERY_ORDER: MediaGallerySlot[] = ['robes', 'crops', 'live', 'banners', 'uncategorized'];
 
@@ -16,93 +14,101 @@ const GALLERY_META: Record<
 > = {
   robes: {
     title: 'Robes & pièces longues',
-    hint: 'Visuels 3:4 pour la grille catalogue — idéalement fond neutre.',
+    hint: 'Visuels catalogue.',
   },
   crops: {
     title: 'Crops & chaussures',
-    hint: 'Même cadrage que les robes pour un feed homogène.',
+    hint: 'Visuels catalogue.',
   },
   live: {
     title: 'Live & reels',
-    hint: 'Captures verticales 9:16 possibles ; le recadrage 3:4 centre le sujet.',
+    hint: 'Captures verticales.',
   },
   banners: {
     title: 'Bannières & mise en avant',
-    hint: 'Pour la home et les campagnes (le backend servira les bons formats).',
+    hint: 'Home & campagnes.',
   },
   uncategorized: {
     title: 'Non classé',
-    hint: 'Classe les médias avant publication.',
+    hint: 'À classer.',
   },
 };
 
+type MediaRow = {
+  id: string;
+  url: string;
+  filename: string;
+  gallery: string;
+  isPrimary: boolean;
+  createdAt: string;
+};
+
 const VendeuseMediasPage = () => {
-  const items = useMediaLibraryStore((s) => s.items);
-  const addItem = useMediaLibraryStore((s) => s.addItem);
-  const removeItem = useMediaLibraryStore((s) => s.removeItem);
-  const setPrimary = useMediaLibraryStore((s) => s.setPrimary);
-  const setGallery = useMediaLibraryStore((s) => s.setGallery);
-  const updateItemUrl = useMediaLibraryStore((s) => s.updateItemUrl);
-  const resetToSeed = useMediaLibraryStore((s) => s.resetToSeed);
-
+  const qc = useQueryClient();
   const [defaultSlot, setDefaultSlot] = useState<MediaGallerySlot>('robes');
-  const [cropTarget, setCropTarget] = useState<MediaLibraryItem | null>(null);
 
-  const byGallery = useMemo(() => {
-    const map = new Map<MediaGallerySlot, MediaLibraryItem[]>();
-    for (const g of GALLERY_ORDER) map.set(g, []);
-    for (const m of items) {
-      const g = m.gallery ?? 'uncategorized';
-      const list = map.get(g) ?? [];
-      list.push(m);
-      map.set(g, list);
-    }
-    return map;
-  }, [items]);
-
-  const onFiles = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      const files = e.target.files;
-      if (!files?.length) return;
-      const startEmpty = items.length === 0;
-      Array.from(files).forEach((f, i) => {
-        const url = URL.createObjectURL(f);
-        const id = `local-${Date.now()}-${i}`;
-        const item: MediaLibraryItem = {
-          id,
-          url,
-          filename: f.name,
-          isPrimary: startEmpty && i === 0,
-          context:
-            defaultSlot === 'robes'
-              ? 'Catalogue — Robes'
-              : defaultSlot === 'crops'
-                ? 'Catalogue — Crops'
-                : defaultSlot === 'live'
-                  ? 'Live & reels'
-                  : defaultSlot === 'banners'
-                    ? 'Bannières & home'
-                    : 'Non classé',
-          gallery: defaultSlot,
-        };
-        addItem(item);
+  const listQ = useQuery({
+    queryKey: ['media'],
+    queryFn: async () => {
+      const { data } = await api.get<{ data: MediaRow[] }>('/media', {
+        params: { page: 1, limit: 200 },
       });
-      e.target.value = '';
+      return data.data;
     },
-    [addItem, defaultSlot, items.length]
-  );
+  });
+
+  const uploadM = useMutation({
+    mutationFn: async (file: File) => {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('gallery', defaultSlot);
+      fd.append('isPrimary', 'false');
+      await api.post('/media', fd);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['media'] }),
+  });
+
+  const deleteM = useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/media/${id}`);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['media'] }),
+  });
+
+  const onFiles = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    Array.from(files).forEach((f) => uploadM.mutate(f));
+    e.target.value = '';
+  };
+
+  const items = listQ.data ?? [];
+  const byGallery = new Map<MediaGallerySlot, MediaRow[]>();
+  for (const g of GALLERY_ORDER) byGallery.set(g, []);
+  for (const m of items) {
+    const g = (GALLERY_ORDER.includes(m.gallery as MediaGallerySlot)
+      ? m.gallery
+      : 'uncategorized') as MediaGallerySlot;
+    const list = byGallery.get(g) ?? [];
+    list.push(m);
+    byGallery.set(g, list);
+  }
 
   return (
     <div className="max-w-6xl">
       <PageHeader
         title="Médiathèque"
-        description="Ajoute des photos, classe-les par usage (robes, crops, live, bannières), recadre en 3:4 et définis l’image principale. Tout est stocké localement jusqu’à l’API upload."
+        description="Liste, envoi et suppression connectés à l’API (fichiers sur le serveur)."
       />
+
+      {listQ.error && (
+        <p className="mb-4 text-sm text-red-300">{String(listQ.error)}</p>
+      )}
 
       <div className="mb-6 flex flex-wrap items-end gap-4 rounded-xl border border-white/10 bg-[#111] p-4">
         <div>
           <label className="mb-1 block text-[10px] font-semibold uppercase text-neutral-500">
-            Emplacement par défaut
+            Galerie à l’import
           </label>
           <select
             value={defaultSlot}
@@ -129,12 +135,10 @@ const VendeuseMediasPage = () => {
         </label>
         <button
           type="button"
-          onClick={() => {
-            if (window.confirm('Réinitialiser la médiathèque aux images de démo ?')) resetToSeed();
-          }}
+          onClick={() => void listQ.refetch()}
           className="rounded-lg border border-white/15 px-3 py-2 text-xs text-neutral-500 hover:text-white"
         >
-          Réinitialiser la démo
+          Actualiser
         </button>
       </div>
 
@@ -158,54 +162,25 @@ const VendeuseMediasPage = () => {
                   className="group relative overflow-hidden rounded-xl border border-white/10 bg-[#111]"
                 >
                   <div className="aspect-[3/4] w-full overflow-hidden bg-[#1a1a1a]">
-                    <img src={m.url} alt="" className="h-full w-full object-cover" />
+                    <img src={absoluteMediaUrl(m.url)} alt="" className="h-full w-full object-cover" />
                   </div>
                   <figcaption className="space-y-2 p-3">
                     <p className="truncate text-xs font-medium text-white">{m.filename}</p>
-                    <select
-                      value={m.gallery ?? 'uncategorized'}
-                      onChange={(e) => setGallery(m.id, e.target.value as MediaGallerySlot)}
-                      className="w-full rounded border border-white/10 bg-black/50 py-1.5 text-[11px] text-white"
+                    {m.isPrimary && (
+                      <p className="text-[10px] font-bold uppercase text-tiktok-pink">Principale</p>
+                    )}
+                    <button
+                      type="button"
+                      disabled={deleteM.isPending}
+                      onClick={() => {
+                        if (window.confirm('Supprimer ce média sur le serveur ?')) deleteM.mutate(m.id);
+                      }}
+                      className="flex w-full items-center justify-center gap-1 rounded-lg border border-red-500/30 py-1.5 text-[10px] font-bold uppercase text-red-400 hover:bg-red-500/10"
+                      aria-label="Supprimer"
                     >
-                      {GALLERY_ORDER.map((g) => (
-                        <option key={g} value={g}>
-                          {GALLERY_META[g].title}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setCropTarget(m)}
-                        className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-white/15 py-1.5 text-[10px] font-bold uppercase text-neutral-300 hover:bg-white/5"
-                      >
-                        <Scissors className="h-3.5 w-3.5" strokeWidth={2} />
-                        Recadrer
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPrimary(m.id)}
-                        className={`flex flex-1 items-center justify-center gap-1 rounded-lg py-1.5 text-[10px] font-bold uppercase ${
-                          m.isPrimary
-                            ? 'bg-tiktok-pink text-white'
-                            : 'border border-white/15 text-neutral-400 hover:text-white'
-                        }`}
-                      >
-                        <Star className={`h-3.5 w-3.5 ${m.isPrimary ? 'fill-white' : ''}`} strokeWidth={2} />
-                        Principale
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (m.url.startsWith('blob:')) URL.revokeObjectURL(m.url);
-                          removeItem(m.id);
-                        }}
-                        className="rounded-lg border border-red-500/30 p-1.5 text-red-400 hover:bg-red-500/10"
-                        aria-label="Supprimer"
-                      >
-                        <Trash2 className="h-4 w-4" strokeWidth={2} />
-                      </button>
-                    </div>
+                      <Trash2 className="h-4 w-4" strokeWidth={2} />
+                      Supprimer
+                    </button>
                   </figcaption>
                 </figure>
               ))}
@@ -214,23 +189,14 @@ const VendeuseMediasPage = () => {
         );
       })}
 
-      {items.length === 0 && (
+      {items.length === 0 && !listQ.isPending && (
         <p className="rounded-xl border border-white/10 bg-[#111] p-8 text-center text-sm text-neutral-500">
-          Aucun média. Importe des fichiers ci-dessus ou réinitialise la démo.
+          Aucun média. Importe des fichiers ci-dessus.
         </p>
       )}
 
-      {cropTarget && (
-        <MediaCropModal
-          imageSrc={cropTarget.url}
-          filename={cropTarget.filename}
-          onClose={() => setCropTarget(null)}
-          onApply={(dataUrl, fname) => {
-            if (cropTarget.url.startsWith('blob:')) URL.revokeObjectURL(cropTarget.url);
-            updateItemUrl(cropTarget.id, dataUrl, fname);
-            setCropTarget(null);
-          }}
-        />
+      {listQ.isPending && (
+        <p className="text-center text-sm text-neutral-500">Chargement…</p>
       )}
     </div>
   );

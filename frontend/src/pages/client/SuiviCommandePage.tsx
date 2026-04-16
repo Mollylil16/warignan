@@ -1,14 +1,9 @@
 import { type FormEvent, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { RefreshCw, Search } from 'lucide-react';
-import {
-  type MockOrder,
-  type MockReservation,
-  type OrderStep,
-  type ReservationWorkflow,
-} from '../../data/vendeuseMock';
+import type { OrderStep, ReservationWorkflow } from '../../types/domain';
+import type { TrackingOrder, TrackingReservation } from '../../types/tracking';
 import { useClientTracking } from '../../hooks/useClientTracking';
-import { listDemoPaymentRefs } from '../../utils/demoPaymentRefs';
 import { formatPrice } from '../../utils/formatPrice';
 
 const orderStepClientLabel: Record<OrderStep, string> = {
@@ -33,11 +28,8 @@ const SuiviCommandePage = () => {
   const [query, setQuery] = useState('');
   const [submitted, setSubmitted] = useState<string | null>(null);
 
-  const { result, refresh, lastSyncedAt, isSyncing } = useClientTracking(submitted);
-
-  const recentRefs = listDemoPaymentRefs()
-    .slice(0, 6)
-    .map((r) => r.reference);
+  const { result, refresh, lastSyncedAt, isSyncing, fetchError, isPending } =
+    useClientTracking(submitted);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -53,8 +45,8 @@ const SuiviCommandePage = () => {
         Suivi commande / réservation
       </h1>
       <p className="mb-4 text-center text-sm text-neutral-400">
-        Une fois le backend en ligne, cette page interrogera l’API en temps réel (webhooks Wave / OM +
-        statuts vendeuse). Pour l’instant : données de démo + suivi local sur ton appareil.
+        Saisis la référence fournie après ton paiement ou sur ton récapitulatif. Les informations
+        proviennent directement du serveur Warignan.
       </p>
 
       <div className="mb-6 flex flex-wrap items-center justify-center gap-2">
@@ -69,11 +61,11 @@ const SuiviCommandePage = () => {
             strokeWidth={2}
             aria-hidden
           />
-          Synchroniser
+          Actualiser
         </button>
         {lastSyncedAt && (
           <span className="text-[10px] text-neutral-600">
-            Dernière synchro :{' '}
+            Dernière mise à jour :{' '}
             {lastSyncedAt.toLocaleTimeString('fr-FR', {
               hour: '2-digit',
               minute: '2-digit',
@@ -98,7 +90,7 @@ const SuiviCommandePage = () => {
               id="ref"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="WRG-…"
+              placeholder="WRG-CMD-… ou WRG-RES-…"
               className="w-full rounded-lg border border-white/10 bg-[#111] py-3 pl-10 pr-3 font-mono text-sm text-white placeholder:text-neutral-600 focus:border-tiktok-cyan/50 focus:outline-none focus:ring-1 focus:ring-tiktok-cyan/40"
               autoComplete="off"
             />
@@ -107,62 +99,26 @@ const SuiviCommandePage = () => {
             type="submit"
             className="shrink-0 rounded-lg bg-tiktok-pink px-4 py-3 text-sm font-bold text-white hover:brightness-110"
           >
-            Suivre
+            Consulter
           </button>
         </div>
       </form>
 
-      {recentRefs.length > 0 && (
-        <div className="mb-8">
-          <p className="mb-2 text-[10px] font-semibold uppercase text-neutral-600">
-            Récentes sur cet appareil
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {recentRefs.map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => {
-                  setQuery(r);
-                  setSubmitted(r);
-                }}
-                className="rounded-full border border-white/10 bg-[#141414] px-3 py-1 font-mono text-[10px] text-tiktok-cyan hover:border-tiktok-cyan/40"
-              >
-                {r}
-              </button>
-            ))}
-          </div>
-        </div>
+      {fetchError && (
+        <p className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-center text-xs text-amber-200">
+          Connexion au serveur impossible. Vérifie que l’API est joignable.
+        </p>
       )}
 
-      <p className="mb-6 text-center text-[11px] text-neutral-600">
-        Essais serveur mock :{' '}
-        <button
-          type="button"
-          className="font-mono text-neutral-400 underline-offset-2 hover:underline"
-          onClick={() => {
-            setQuery('WRG-CMD-001');
-            setSubmitted('WRG-CMD-001');
-          }}
-        >
-          WRG-CMD-001
-        </button>
-        {' · '}
-        <button
-          type="button"
-          className="font-mono text-neutral-400 underline-offset-2 hover:underline"
-          onClick={() => {
-            setQuery('WRG-RES-A1B2');
-            setSubmitted('WRG-RES-A1B2');
-          }}
-        >
-          WRG-RES-A1B2
-        </button>
-      </p>
-
-      {!result && (
+      {!submitted?.trim() && (
         <p className="rounded-lg border border-white/10 bg-[#111] p-4 text-sm text-neutral-400">
-          Saisis une référence pour afficher le statut.
+          Indique une référence pour afficher l’état de ta commande ou de ta réservation.
+        </p>
+      )}
+
+      {submitted?.trim() && isPending && (
+        <p className="rounded-lg border border-white/10 bg-[#111] p-4 text-sm text-neutral-400">
+          Chargement…
         </p>
       )}
 
@@ -173,62 +129,34 @@ const SuiviCommandePage = () => {
       )}
 
       {result?.kind === 'not_found' && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200/90">
-          Aucun dossier pour «&nbsp;{normalizeRef(result.ref)}&nbsp;». Vérifie la saisie, enregistre la
-          référence depuis le paiement, ou attends la synchro après un retour Wave / OM.
+        <div className="rounded-lg border border-white/10 bg-[#111] p-4 text-sm text-neutral-300">
+          Aucun dossier trouvé pour «&nbsp;{normalizeRef(result.ref)}&nbsp;». Contrôle la référence
+          (copier-coller depuis Wave, Orange Money ou ton e-mail de confirmation).
         </div>
-      )}
-
-      {result?.kind === 'local_payment' && (
-        <article className="rounded-xl border border-tiktok-cyan/30 bg-[#111] p-5">
-          <p className="mb-1 font-mono text-sm text-tiktok-cyan">{result.saved.reference}</p>
-          <p className="mb-2 text-lg font-bold text-white">Paiement (données locales)</p>
-          <p className="mb-3 text-sm text-neutral-400">
-            Flux :{' '}
-            <strong className="text-neutral-200">
-              {result.saved.flow === 'order' ? 'Commande' : 'Réservation (acompte)'}
-            </strong>
-            {result.saved.amountFcfa > 0 && (
-              <>
-                {' '}
-                — montant :{' '}
-                <strong className="text-white">{formatPrice(result.saved.amountFcfa)}</strong>
-              </>
-            )}
-          </p>
-          <p className="mb-3 rounded-lg border border-white/10 bg-black/30 p-3 text-sm leading-relaxed text-neutral-300">
-            {result.hint}
-          </p>
-          <p className="text-xs text-neutral-600">
-            Cycle :{' '}
-            <span className="font-mono text-neutral-500">{result.saved.lifecycle ?? 'saved'}</span>
-            {result.saved.lastRedirectAt && (
-              <>
-                {' '}
-                · Redirection :{' '}
-                {new Date(result.saved.lastRedirectAt).toLocaleString('fr-FR', {
-                  dateStyle: 'short',
-                  timeStyle: 'short',
-                })}
-              </>
-            )}
-            {result.saved.returnSeenAt && (
-              <>
-                {' '}
-                · Retour site :{' '}
-                {new Date(result.saved.returnSeenAt).toLocaleString('fr-FR', {
-                  dateStyle: 'short',
-                  timeStyle: 'short',
-                })}
-              </>
-            )}
-          </p>
-        </article>
       )}
 
       {result?.kind === 'order' && <OrderTrackingCard order={result.order} />}
       {result?.kind === 'reservation' && (
         <ReservationTrackingCard reservation={result.reservation} />
+      )}
+
+      {result?.kind === 'api_payment' && (
+        <article className="rounded-xl border border-tiktok-cyan/30 bg-[#111] p-5">
+          <p className="mb-1 font-mono text-sm text-tiktok-cyan">{result.reference}</p>
+          <p className="mb-3 text-lg font-bold text-white">Historique paiement</p>
+          <ul className="space-y-2 text-sm text-neutral-300">
+            {result.events.map((ev, i) => (
+              <li key={i} className="rounded border border-white/10 bg-black/30 px-3 py-2">
+                <span className="font-semibold text-white">{ev.status}</span> — {ev.flow} —{' '}
+                {formatPrice(ev.amountFcfa)}
+                {ev.provider && <span className="text-neutral-500"> ({ev.provider})</span>}
+                <span className="ml-2 text-xs text-neutral-600">
+                  {new Date(ev.createdAt).toLocaleString('fr-FR')}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </article>
       )}
 
       <p className="mt-10 text-center text-xs text-neutral-600">
@@ -240,7 +168,7 @@ const SuiviCommandePage = () => {
   );
 };
 
-function OrderTrackingCard({ order }: { order: MockOrder }) {
+function OrderTrackingCard({ order }: { order: TrackingOrder }) {
   const steps: OrderStep[] = ['preparation', 'emballage', 'expediee', 'livree'];
   const idx = steps.indexOf(order.step);
 
@@ -250,7 +178,24 @@ function OrderTrackingCard({ order }: { order: MockOrder }) {
       <p className="text-lg font-bold text-white">Commande</p>
       <p className="mb-4 text-sm text-neutral-500">{order.city}</p>
       <p className="mb-2 text-sm text-neutral-400">{order.itemsSummary}</p>
-      <p className="mb-6 text-xl font-bold text-tiktok-pink">{formatPrice(order.totalFcfa)}</p>
+      <div className="mb-4 rounded-lg border border-white/10 bg-black/30 p-3 text-sm text-neutral-300">
+        <div className="flex justify-between">
+          <span className="text-neutral-400">Sous-total</span>
+          <span className="font-semibold text-white">{formatPrice(order.subtotalFcfa)}</span>
+        </div>
+        {order.promoCode && order.discountFcfa > 0 && (
+          <div className="mt-1 flex justify-between">
+            <span className="text-neutral-400">
+              Promo <span className="font-mono text-white">{order.promoCode}</span>
+            </span>
+            <span className="font-semibold text-white">- {formatPrice(order.discountFcfa)}</span>
+          </div>
+        )}
+        <div className="mt-2 flex justify-between text-base font-bold text-tiktok-pink">
+          <span>Total</span>
+          <span>{formatPrice(order.totalFcfa)}</span>
+        </div>
+      </div>
 
       <p className="mb-3 text-xs font-semibold uppercase text-neutral-500">Étapes</p>
       <ol className="space-y-3">
@@ -269,31 +214,48 @@ function OrderTrackingCard({ order }: { order: MockOrder }) {
                 <p className={done ? 'font-medium text-white' : 'text-neutral-600'}>
                   {orderStepClientLabel[s]}
                 </p>
-                {s === order.step && (
-                  <p className="text-xs text-tiktok-cyan">Étape en cours</p>
-                )}
+                {s === order.step && <p className="text-xs text-tiktok-cyan">Étape en cours</p>}
               </div>
             </li>
           );
         })}
       </ol>
       <p className="mt-4 text-xs text-neutral-600">
-        Payé le{' '}
-        {new Date(order.paidAt).toLocaleString('fr-FR', {
-          dateStyle: 'short',
-          timeStyle: 'short',
-        })}
+        {order.paidAt
+          ? `Paiement enregistré le ${new Date(order.paidAt).toLocaleString('fr-FR', {
+              dateStyle: 'short',
+              timeStyle: 'short',
+            })}`
+          : 'Paiement : en attente de confirmation côté boutique.'}
       </p>
     </article>
   );
 }
 
-function ReservationTrackingCard({ reservation }: { reservation: MockReservation }) {
+function ReservationTrackingCard({ reservation }: { reservation: TrackingReservation }) {
   return (
     <article className="rounded-xl border border-white/10 bg-[#111] p-5">
       <p className="mb-1 font-mono text-sm text-reserve-purple">{reservation.reference}</p>
       <p className="text-lg font-bold text-white">Réservation</p>
       <p className="mb-4 text-sm text-neutral-500">{reservation.productsSummary}</p>
+      <div className="mb-4 rounded-lg border border-white/10 bg-black/30 p-3 text-sm text-neutral-300">
+        <div className="flex justify-between">
+          <span className="text-neutral-400">Sous-total</span>
+          <span className="font-semibold text-white">{formatPrice(reservation.subtotalFcfa)}</span>
+        </div>
+        {reservation.promoCode && reservation.discountFcfa > 0 && (
+          <div className="mt-1 flex justify-between">
+            <span className="text-neutral-400">
+              Promo <span className="font-mono text-white">{reservation.promoCode}</span>
+            </span>
+            <span className="font-semibold text-white">- {formatPrice(reservation.discountFcfa)}</span>
+          </div>
+        )}
+        <div className="mt-2 flex justify-between text-base font-bold text-white">
+          <span>Total</span>
+          <span>{formatPrice(reservation.totalFcfa)}</span>
+        </div>
+      </div>
       <p className="mb-2 text-sm text-neutral-400">
         Acompte :{' '}
         <span className="font-semibold text-reserve-purple">
@@ -308,7 +270,6 @@ function ReservationTrackingCard({ reservation }: { reservation: MockReservation
               : 'Échec'}
         </span>
       </p>
-      <p className="mb-6 text-xl font-bold text-white">{formatPrice(reservation.totalFcfa)} total</p>
       <p className="rounded-lg border border-white/10 bg-black/30 p-3 text-sm text-neutral-300">
         {reservationWorkflowLabel[reservation.workflow]}
       </p>

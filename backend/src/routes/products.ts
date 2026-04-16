@@ -10,11 +10,12 @@ import {
   updateProduct,
 } from '../services/productService.js';
 import { requireAuth, requireRoles } from '../middleware/auth.js';
+import { listMeta, paginationQuerySchema } from '../lib/pagination.js';
 import { HttpError } from '../middleware/errorHandler.js';
 
 const router = Router();
 
-const listQuerySchema = z.object({
+const listQuerySchema = paginationQuerySchema.extend({
   category: z.enum(['ALL', 'ROBE', 'CROP']).optional(),
   maxPrice: z.coerce.number().optional(),
   sortBy: z
@@ -40,8 +41,8 @@ const patchBodySchema = createBodySchema.partial();
 router.get('/', async (req, res, next) => {
   try {
     const q = listQuerySchema.parse(req.query);
-    const items = await listProducts(q);
-    res.json({ data: items });
+    const { items, total, page, limit } = await listProducts(q);
+    res.json({ data: items, meta: listMeta(page, limit, total) });
   } catch (e) {
     next(e);
   }

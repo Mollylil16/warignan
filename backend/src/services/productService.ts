@@ -6,6 +6,8 @@ export type ListProductsQuery = {
   maxPrice?: number;
   sortBy?: 'price-asc' | 'price-desc' | 'popular' | 'newest' | 'oldest';
   q?: string;
+  page?: number;
+  limit?: number;
 };
 
 function asStringArray(json: unknown): string[] {
@@ -87,8 +89,15 @@ export async function listProducts(query: ListProductsQuery) {
       break;
   }
 
-  const rows = await prisma.product.findMany({ where, orderBy });
-  return rows.map(productToDto);
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+  const skip = (page - 1) * limit;
+
+  const [rows, total] = await Promise.all([
+    prisma.product.findMany({ where, orderBy, skip, take: limit }),
+    prisma.product.count({ where }),
+  ]);
+  return { items: rows.map(productToDto), total, page, limit };
 }
 
 export async function getProductById(id: string) {

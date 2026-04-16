@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import PageHeader from '../../components/vendeuse/PageHeader';
-import { mockCouriers, mockDeliveries, type MockDelivery } from '../../data/vendeuseMock';
+import { useCouriers } from '../../hooks/useCouriers';
+import { useDeliveriesList, type DeliveryRow } from '../../hooks/useDeliveries';
+import { api } from '../../services/api';
 
 function startOfWeekMonday(d: Date): Date {
   const x = new Date(d);
@@ -21,15 +24,17 @@ function toISO(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-const statusLabel: Record<MockDelivery['status'], string> = {
-  planned: 'A assigner',
-  assigned: 'Livreur assigne',
-  out: 'En tournee',
-  done: 'Livree',
+const statusLabel: Record<string, string> = {
+  planned: 'À assigner',
+  assigned: 'Livreur assigné',
+  out: 'En tournée',
+  done: 'Livrée',
 };
 
 const VendeuseLivraisonsPage = () => {
-  const [deliveries, setDeliveries] = useState(() => [...mockDeliveries]);
+  const qc = useQueryClient();
+  const { data: deliveries = [], isPending, error, refetch } = useDeliveriesList();
+  const { data: couriers = [] } = useCouriers();
   const [selectedISO, setSelectedISO] = useState(() => toISO(new Date()));
 
   const weekStart = useMemo(() => startOfWeekMonday(new Date()), []);
@@ -38,40 +43,55 @@ const VendeuseLivraisonsPage = () => {
     [weekStart]
   );
 
-  const dayDeliveries = deliveries.filter((d) => d.dateISO === selectedISO);
+  const patch = useMutation({
+    mutationFn: async ({ id, body }: { id: string; body: Record<string, unknown> }) => {
+      await api.patch(`/deliveries/${id}`, body);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['deliveries'] }),
+  });
+
+  const dayDeliveries = (deliveries as DeliveryRow[]).filter((d) => d.dateISO === selectedISO);
 
   const assignCourier = (deliveryId: string, courierId: string) => {
-    setDeliveries((prev) =>
-      prev.map((d) =>
-        d.id === deliveryId
-          ? { ...d, courierId: courierId || null, status: courierId ? 'assigned' : 'planned' }
-          : d
-      )
-    );
+    if (!courierId) {
+      patch.mutate({ id: deliveryId, body: { courierId: null, status: 'planned' } });
+    } else {
+      patch.mutate({ id: deliveryId, body: { courierId, status: 'assigned' } });
+    }
   };
 
   const launchRun = (deliveryId: string) => {
-    setDeliveries((prev) =>
-      prev.map((d) => (d.id === deliveryId ? { ...d, status: 'out' as const } : d))
-    );
+    patch.mutate({ id: deliveryId, body: { status: 'out' } });
   };
 
-  const countForDay = (iso: string) => deliveries.filter((d) => d.dateISO === iso).length;
+  const countForDay = (iso: string) =>
+    (deliveries as DeliveryRow[]).filter((d) => d.dateISO === iso).length;
+
+  const courierName = (id: string | null) =>
+    couriers.find((c) => c.id === id)?.displayName ?? null;
 
   return (
     <div className="max-w-6xl">
       <PageHeader
         title="Livraisons et agenda"
-        description="Choisis un jour, vois les colis, assigne un livreur, lance la tournee (demo locale)."
+        description="Données API : assignation livreur (id réel) et statuts."
         actions={
           <button
             type="button"
+            onClick={() => void refetch()}
             className="rounded-lg bg-tiktok-cyan/15 px-4 py-2 text-sm font-bold text-tiktok-cyan hover:bg-tiktok-cyan/25"
           >
-            Nouveau creneau (bientot)
+            Actualiser
           </button>
         }
       />
+
+      {error && (
+        <p className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
+          {String(error)}
+        </p>
+      )}
+      {isPending && <p className="mb-4 text-sm text-neutral-500">Chargement…</p>}
 
       <section className="mb-8 rounded-xl border border-white/10 bg-[#111] p-4">
         <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-500">
@@ -105,7 +125,7 @@ const VendeuseLivraisonsPage = () => {
       </section>
 
       <h2 className="mb-4 text-lg font-bold text-white">
-        Creneau du{' '}
+        Créneau du{' '}
         {new Date(selectedISO + 'T12:00:00').toLocaleDateString('fr-FR', {
           weekday: 'long',
           day: 'numeric',
@@ -115,12 +135,13 @@ const VendeuseLivraisonsPage = () => {
 
       {dayDeliveries.length === 0 ? (
         <p className="rounded-xl border border-dashed border-white/15 bg-[#111] p-8 text-center text-sm text-neutral-500">
-          Aucune livraison ce jour (donnees fictives). Change de jour ou edite vendeuseMock.
+          Aucune livraison ce jour. Les livraisons sont créées côté base (seed) ou à ajouter via
+          l’admin.
         </p>
       ) : (
         <ul className="space-y-4">
           {dayDeliveries.map((d) => {
-            const courier = mockCouriers.find((c) => c.id === d.courierId);
+            const cname = courierName(d.courierId);
             return (
               <li
                 key={d.id}
@@ -131,37 +152,34 @@ const VendeuseLivraisonsPage = () => {
                   <p className="font-semibold text-white">{d.clientName}</p>
                   <p className="mt-1 text-sm text-neutral-400">{d.address}</p>
                   <p className="mt-2 text-xs text-neutral-500">
-                    Fenetre : {d.windowLabel} - {statusLabel[d.status]}
+                    Fenêtre : {d.windowLabel} — {statusLabel[d.status] ?? d.status}
                   </p>
-                  {courier && (
-                    <p className="mt-2 text-sm text-tiktok-cyan">
-                      Livreur : {courier.name} - {courier.phone}
-                    </p>
+                  {cname && (
+                    <p className="mt-2 text-sm text-tiktok-cyan">Livreur : {cname}</p>
                   )}
                 </div>
                 <div className="mt-4 flex shrink-0 flex-col gap-2 sm:mt-0 sm:w-56">
                   <label className="text-xs text-neutral-500">Assigner</label>
                   <select
                     value={d.courierId ?? ''}
+                    disabled={patch.isPending}
                     onChange={(e) => assignCourier(d.id, e.target.value)}
                     className="rounded-lg border border-white/15 bg-[#0a0a0a] px-3 py-2 text-sm text-white"
                   >
-                    <option value="">Choisir</option>
-                    {mockCouriers
-                      .filter((c) => c.active)
-                      .map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
+                    <option value="">—</option>
+                    {couriers.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.displayName}
+                      </option>
+                    ))}
                   </select>
                   <button
                     type="button"
                     onClick={() => launchRun(d.id)}
-                    disabled={!d.courierId || d.status === 'done' || d.status === 'out'}
+                    disabled={!d.courierId || d.status === 'done' || d.status === 'out' || patch.isPending}
                     className="rounded-lg bg-reserve-purple py-2 text-xs font-bold uppercase text-white hover:brightness-110 disabled:opacity-40"
                   >
-                    Lancer la tournee
+                    Lancer la tournée
                   </button>
                 </div>
               </li>

@@ -4,33 +4,32 @@ import {
   ImageIcon,
   Package,
   Percent,
+  ReceiptText,
+  ShieldAlert,
   Truck,
   UserCheck,
 } from 'lucide-react';
 import StatCard from '../../components/vendeuse/StatCard';
 import PageHeader from '../../components/vendeuse/PageHeader';
-import {
-  mockDeliveries,
-  mockOrders,
-  mockPromotions,
-  mockReservations,
-} from '../../data/vendeuseMock';
+import { useActivePromotionsCount } from '../../hooks/usePromotions';
+import { useVendeuseOverview } from '../../hooks/useVendeuseOverview';
 import { formatPrice } from '../../utils/formatPrice';
 
 const fmt = (iso: string) =>
   new Date(iso).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
 
 const VendeuseDashboardPage = () => {
-  const awaitingValidation = mockReservations.filter(
-    (r) => r.workflow === 'awaiting_validation'
-  ).length;
-  const awaitingDeposit = mockReservations.filter(
-    (r) => r.workflow === 'awaiting_deposit'
-  ).length;
-  const prepOrders = mockOrders.filter((o) => o.step === 'preparation' || o.step === 'emballage')
-    .length;
-  const livraisonsAPlanifier = mockDeliveries.filter((d) => d.status !== 'done').length;
-  const promosActives = mockPromotions.filter((p) => p.active).length;
+  const { data: overview } = useVendeuseOverview();
+  const { data: promosActives = 0 } = useActivePromotionsCount();
+
+  const awaitingValidation = overview?.kpi.reservations.awaiting_validation ?? 0;
+  const awaitingDeposit = overview?.kpi.reservations.awaiting_deposit ?? 0;
+  const prepOrders =
+    (overview?.kpi.orders.preparation ?? 0) + (overview?.kpi.orders.emballage ?? 0);
+  const shippedToday = overview?.kpi.orders.shippedToday ?? 0;
+  const payments24hAmount = overview?.kpi.payments.last24h.amountFcfaConfirmed ?? 0;
+  const payments24hFailed = overview?.kpi.payments.last24h.failedCount ?? 0;
+  const anomalies7d = overview?.kpi.payments.anomaliesLast7d ?? 0;
 
   const shortcuts = [
     { to: '/vendeuse/reservations', label: 'Réservations', icon: UserCheck, desc: 'Acomptes & validation' },
@@ -41,28 +40,13 @@ const VendeuseDashboardPage = () => {
     { to: '/vendeuse/promotions', label: 'Promotions', icon: Percent, desc: 'Codes & remises' },
   ];
 
-  const recent = [
-    ...mockReservations.slice(0, 2).map((r) => ({
-      id: r.id,
-      type: 'Réservation' as const,
-      label: r.reference,
-      detail: r.clientName,
-      time: r.createdAt,
-    })),
-    ...mockOrders.slice(0, 2).map((o) => ({
-      id: o.id,
-      type: 'Commande' as const,
-      label: o.reference,
-      detail: formatPrice(o.totalFcfa),
-      time: o.paidAt,
-    })),
-  ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+  const todo = overview?.todo ?? [];
 
   return (
     <div className="max-w-6xl">
       <PageHeader
         title="Tableau de bord"
-        description="Vue synthétique : priorités du jour, accès rapide aux modules. Les données sont fictives jusqu’au branchement API."
+        description="Vue synthétique alimentée par l’API."
       />
 
       <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -88,17 +72,48 @@ const VendeuseDashboardPage = () => {
           to="/vendeuse/commandes"
         />
         <StatCard
-          label="Livraisons en cours"
-          value={livraisonsAPlanifier}
-          hint="Planifiées ou à assigner"
+          label="Expédiées aujourd’hui"
+          value={shippedToday}
+          hint="Commandes passées à expédiée"
           tone="cyan"
-          to="/vendeuse/livraisons"
+          to="/vendeuse/commandes"
         />
+      </div>
+
+      <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="rounded-xl border border-white/10 bg-[#111] p-5">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
+            <ReceiptText className="h-4 w-4 text-tiktok-cyan" strokeWidth={2} aria-hidden />
+            Paiements (24h)
+          </div>
+          <p className="text-2xl font-bold text-white">{formatPrice(payments24hAmount)}</p>
+          <p className="mt-1 text-xs text-neutral-500">
+            {payments24hFailed > 0 ? `${payments24hFailed} échec(s) à traiter` : 'Aucun échec signalé'}
+          </p>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-[#111] p-5">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
+            <ShieldAlert className="h-4 w-4 text-amber-300" strokeWidth={2} aria-hidden />
+            Anomalies (7j)
+          </div>
+          <p className="text-2xl font-bold text-white">{anomalies7d}</p>
+          <p className="mt-1 text-xs text-neutral-500">
+            Références payées introuvables (à réconcilier)
+          </p>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-[#111] p-5">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
+            <Percent className="h-4 w-4 text-tiktok-pink" strokeWidth={2} aria-hidden />
+            Promotions actives
+          </div>
+          <p className="text-2xl font-bold text-white">{promosActives}</p>
+          <p className="mt-1 text-xs text-neutral-500">Visible côté boutique (API publique)</p>
+        </div>
       </div>
 
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-bold text-white">Raccourcis</h2>
-        <span className="text-xs text-neutral-500">{promosActives} promo(s) active(s)</span>
+        <span className="text-xs text-neutral-500">{promosActives} code(s) promo valide(s) aujourd’hui</span>
       </div>
       <div className="mb-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {shortcuts.map(({ to, label, icon: Icon, desc }) => (
@@ -118,38 +133,32 @@ const VendeuseDashboardPage = () => {
         ))}
       </div>
 
-      <h2 className="mb-4 text-lg font-bold text-white">Activité récente</h2>
-      <div className="overflow-hidden rounded-xl border border-white/10">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-white/10 bg-[#111] text-xs uppercase tracking-wide text-neutral-500">
-            <tr>
-              <th className="px-4 py-3 font-semibold">Type</th>
-              <th className="px-4 py-3 font-semibold">Référence</th>
-              <th className="px-4 py-3 font-semibold">Détail</th>
-              <th className="px-4 py-3 font-semibold">Date</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {recent.map((row) => (
-              <tr key={row.id + row.type} className="bg-[#0c0c0c] hover:bg-white/[0.02]">
-                <td className="px-4 py-3">
-                  <span
-                    className={
-                      row.type === 'Réservation'
-                        ? 'text-reserve-purple'
-                        : 'text-tiktok-pink'
-                    }
+      <h2 className="mb-4 text-lg font-bold text-white">À faire maintenant</h2>
+      <div className="overflow-hidden rounded-xl border border-white/10 bg-[#0c0c0c]">
+        {todo.length === 0 ? (
+          <p className="p-5 text-sm text-neutral-500">Rien d’urgent détecté.</p>
+        ) : (
+          <ul className="divide-y divide-white/5">
+            {todo.map((t) => (
+              <li key={t.kind + t.reference} className="flex items-center justify-between gap-4 p-4">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-white">{t.title}</p>
+                  <p className="truncate text-xs text-neutral-500">{t.subtitle}</p>
+                  <p className="mt-1 font-mono text-[11px] text-tiktok-cyan">{t.reference}</p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-[11px] text-neutral-600">{fmt(t.createdAt)}</p>
+                  <Link
+                    to={t.kind === 'order' ? '/vendeuse/commandes' : '/vendeuse/reservations'}
+                    className="mt-2 inline-block rounded-lg border border-white/15 px-3 py-1.5 text-xs font-semibold text-neutral-300 hover:bg-white/5 hover:text-white"
                   >
-                    {row.type}
-                  </span>
-                </td>
-                <td className="px-4 py-3 font-mono text-xs text-neutral-300">{row.label}</td>
-                <td className="px-4 py-3 text-neutral-400">{row.detail}</td>
-                <td className="px-4 py-3 text-neutral-500">{fmt(row.time)}</td>
-              </tr>
+                    Ouvrir
+                  </Link>
+                </div>
+              </li>
             ))}
-          </tbody>
-        </table>
+          </ul>
+        )}
       </div>
     </div>
   );

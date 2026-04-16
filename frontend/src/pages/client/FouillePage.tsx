@@ -11,7 +11,7 @@ import FilterBar from '../../components/shared/StatusBadge';
 import ProductCard from '../../components/shared/ProductCard';
 
 const FouillePage = () => {
-  const { data: catalog } = useProducts();
+  const { data: catalog, isLoading, error } = useProducts();
   const [searchQuery, setSearchQuery] = useState('');
 
   // ---- ÉTAT DES FILTRES ----
@@ -33,7 +33,8 @@ const FouillePage = () => {
 
   // ---- PRIX MAX PARMI TOUS LES PRODUITS ----
   // Pour définir la limite haute du slider
-  const maxProductPrice = Math.max(...catalog.map((p) => p.prix), 1000);
+  const maxProductPrice =
+    catalog.length > 0 ? Math.max(...catalog.map((p) => p.prix), 1000) : 1000;
 
   // ---- FILTRAGE ET TRI DES PRODUITS ----
   // useMemo = ce calcul ne se refait QUE si filters ou le catalogue changent
@@ -89,6 +90,26 @@ const FouillePage = () => {
 
     return result;
   }, [filters, catalog, searchQuery]);
+
+  if (isLoading) {
+    return (
+      <main className="mx-auto max-w-6xl px-4 py-20 text-center text-neutral-400">
+        Chargement du catalogue…
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="mx-auto max-w-lg px-4 py-20 text-center text-red-300">
+        <p className="mb-2 font-semibold">Catalogue indisponible</p>
+        <p className="text-sm text-neutral-500">
+          Démarre l’API backend et vérifie <span className="font-mono">VITE_API_BASE_URL</span> dans
+          le <span className="font-mono">.env</span> du frontend.
+        </p>
+      </main>
+    );
+  }
 
   return (
     <>

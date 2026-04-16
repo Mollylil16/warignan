@@ -62,6 +62,11 @@ enum DeliveryStatus {
   done
 }
 
+enum PromotionType {
+  percent
+  fixed
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -93,6 +98,9 @@ model Order {
   clientName   String
   city         String
   itemsSummary String
+  subtotalFcfa Int       @default(0)
+  discountFcfa Int       @default(0)
+  promoCode    String?
   totalFcfa    Int
   paidAt       DateTime?
   step         OrderStep @default(preparation)
@@ -106,6 +114,9 @@ model Reservation {
   clientName      String
   clientPhone     String
   productsSummary String
+  subtotalFcfa    Int                   @default(0)
+  discountFcfa    Int                   @default(0)
+  promoCode       String?
   totalFcfa       Int
   depositFcfa     Int
   depositStatus   DepositStatus         @default(pending)
@@ -149,4 +160,17 @@ model Delivery {
   status      DeliveryStatus @default(planned)
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
+}
+
+model Promotion {
+  id        String        @id @default(cuid())
+  code      String        @unique
+  label     String
+  type      PromotionType
+  value     Int
+  startDate String
+  endDate   String
+  active    Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 }

@@ -75,12 +75,35 @@ interface CartState {
   cartDrawerOpen: boolean;
   cartDrawerTab: CartDrawerTab;
 
+  reservePromoCode: string;
+  orderPromoCode: string;
+  reserveDiscountFcfa: number;
+  orderDiscountFcfa: number;
+  reserveQuotedTotalFcfa: number | null;
+  orderQuotedTotalFcfa: number | null;
+
   addToReserve: (product: Product) => void;
   addToOrder: (product: Product) => void;
   decreaseReserve: (productId: string) => void;
   decreaseOrder: (productId: string) => void;
   removeFromReserve: (productId: string) => void;
   removeFromOrder: (productId: string) => void;
+
+  setReservePromoCode: (code: string) => void;
+  setOrderPromoCode: (code: string) => void;
+
+  setReservePromoQuote: (quote: {
+    promoCode: string;
+    discountFcfa: number;
+    totalFcfa: number;
+  }) => void;
+  setOrderPromoQuote: (quote: {
+    promoCode: string;
+    discountFcfa: number;
+    totalFcfa: number;
+  }) => void;
+  clearReservePromo: () => void;
+  clearOrderPromo: () => void;
 
   openCart: (tab: CartDrawerTab) => void;
   closeCart: () => void;
@@ -95,6 +118,27 @@ export const useCartStore = create<CartState>()(
       orderLines: [],
       cartDrawerOpen: false,
       cartDrawerTab: 'reserve',
+
+      reservePromoCode: '',
+      orderPromoCode: '',
+      reserveDiscountFcfa: 0,
+      orderDiscountFcfa: 0,
+      reserveQuotedTotalFcfa: null,
+      orderQuotedTotalFcfa: null,
+
+      setReservePromoCode: (code) =>
+        set({
+          reservePromoCode: code,
+          reserveDiscountFcfa: 0,
+          reserveQuotedTotalFcfa: null,
+        }),
+
+      setOrderPromoCode: (code) =>
+        set({
+          orderPromoCode: code,
+          orderDiscountFcfa: 0,
+          orderQuotedTotalFcfa: null,
+        }),
 
       addToReserve: (product) =>
         set((s) => ({
@@ -130,6 +174,26 @@ export const useCartStore = create<CartState>()(
           orderLines: removeLine(s.orderLines, productId),
         })),
 
+      setReservePromoQuote: (quote) =>
+        set({
+          reservePromoCode: quote.promoCode.trim().toUpperCase(),
+          reserveDiscountFcfa: Math.max(0, Math.trunc(quote.discountFcfa)),
+          reserveQuotedTotalFcfa: Math.max(0, Math.trunc(quote.totalFcfa)),
+        }),
+
+      setOrderPromoQuote: (quote) =>
+        set({
+          orderPromoCode: quote.promoCode.trim().toUpperCase(),
+          orderDiscountFcfa: Math.max(0, Math.trunc(quote.discountFcfa)),
+          orderQuotedTotalFcfa: Math.max(0, Math.trunc(quote.totalFcfa)),
+        }),
+
+      clearReservePromo: () =>
+        set({ reservePromoCode: '', reserveDiscountFcfa: 0, reserveQuotedTotalFcfa: null }),
+
+      clearOrderPromo: () =>
+        set({ orderPromoCode: '', orderDiscountFcfa: 0, orderQuotedTotalFcfa: null }),
+
       openCart: (tab) => set({ cartDrawerOpen: true, cartDrawerTab: tab }),
 
       closeCart: () => set({ cartDrawerOpen: false }),
@@ -147,6 +211,12 @@ export const useCartStore = create<CartState>()(
       partialize: (s) => ({
         reserveLines: s.reserveLines,
         orderLines: s.orderLines,
+        reservePromoCode: s.reservePromoCode,
+        orderPromoCode: s.orderPromoCode,
+        reserveDiscountFcfa: s.reserveDiscountFcfa,
+        orderDiscountFcfa: s.orderDiscountFcfa,
+        reserveQuotedTotalFcfa: s.reserveQuotedTotalFcfa,
+        orderQuotedTotalFcfa: s.orderQuotedTotalFcfa,
       }),
     }
   )

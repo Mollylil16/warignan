@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
+  await prisma.promotion.deleteMany();
   await prisma.paymentEvent.deleteMany();
   await prisma.mediaAsset.deleteMany();
   await prisma.delivery.deleteMany();
@@ -28,6 +29,15 @@ async function main() {
       passwordHash: await bcrypt.hash('admin123', 10),
       displayName: 'Admin démo',
       role: 'admin',
+    },
+  });
+
+  const livreur = await prisma.user.create({
+    data: {
+      email: 'livreur@warignan.shop',
+      passwordHash: await bcrypt.hash('livreur123', 10),
+      displayName: 'Livreur démo',
+      role: 'livreur',
     },
   });
 
@@ -190,13 +200,38 @@ async function main() {
         address: 'Marcory résidentiel, villa 12',
         dateISO: '2026-04-06',
         windowLabel: '10h – 12h',
-        courierId: 'c1',
+        courierId: livreur.id,
         status: 'assigned',
       },
     ],
   });
 
-  console.log('Seed OK — comptes : vendeuse@warignan.shop / vendeuse123 , admin@warignan.shop / admin123');
+  await prisma.promotion.createMany({
+    data: [
+      {
+        code: 'WARI15',
+        label: 'Live Instagram — 15 %',
+        type: 'percent',
+        value: 15,
+        startDate: '2026-01-01',
+        endDate: '2026-12-31',
+        active: true,
+      },
+      {
+        code: 'CAVIAR500',
+        label: '500 FCFA sur la fouille',
+        type: 'fixed',
+        value: 500,
+        startDate: '2026-04-01',
+        endDate: '2026-06-30',
+        active: true,
+      },
+    ],
+  });
+
+  console.log(
+    'Seed OK — vendeuse@warignan.shop / vendeuse123 , admin@warignan.shop / admin123 , livreur@warignan.shop / livreur123'
+  );
 }
 
 main()

@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { Router } from 'express';
 import { z } from 'zod';
+import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { recordPaymentEvent } from '../services/paymentEventService.js';
 
@@ -29,6 +30,109 @@ router.post('/', requireAuth, requireRoles('vendeuse', 'admin'), async (req, res
       payload: JSON.parse(JSON.stringify(req.body)) as Prisma.InputJsonValue,
     });
     res.status(201).json(row);
+  } catch (e) {
+    next(e);
+  }
+});
+
+const listQuerySchema = z.object({
+  q: z.string().trim().min(1).max(120).optional(),
+  flow: z.enum(['order', 'reservation']).optional(),
+  provider: z.enum(['wave', 'orange', 'manual']).optional(),
+  status: z.enum(['pending', 'confirmed', 'failed']).optional(),
+  fromISO: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  toISO: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  limit: z.coerce.number().int().min(1).max(500).optional(),
+});
+
+router.get('/', requireAuth, requireRoles('vendeuse', 'admin'), async (req, res, next) => {
+  try {
+    const q = listQuerySchema.parse(req.query);
+    const limit = q.limit ?? 200;
+
+    const where: Record<string, unknown> = {};
+    if (q.flow) where.flow = q.flow;
+    if (q.provider) where.provider = q.provider;
+    if (q.status) where.status = q.status;
+    if (q.q) {
+      where.OR = [
+        { reference: { contains: q.q, mode: 'insensitive' } },
+        { status: { contains: q.q, mode: 'insensitive' } },
+        { provider: { contains: q.q, mode: 'insensitive' } },
+      ];
+    }
+    if (q.fromISO || q.toISO) {
+      const from = q.fromISO ? new Date(`${q.fromISO}T00:00:00.000Z`) : undefined;
+      const to = q.toISO ? new Date(`${q.toISO}T23:59:59.999Z`) : undefined;
+      where.createdAt = {
+        ...(from ? { gte: from } : {}),
+        ...(to ? { lte: to } : {}),
+      };
+    }
+
+    const events = await prisma.paymentEvent.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+
+    const refs = Array.from(new Set(events.map((e: { reference: string }) => e.reference)));
+    const [orders, reservations] = await Promise.all([
+      prisma.order.findMany({
+        where: { reference: { in: refs } },
+        select: { reference: true, id: true, totalFcfa: true, clientName: true, city: true },
+      }),
+      prisma.reservation.findMany({
+        where: { reference: { in: refs } },
+        select: { reference: true, id: true, totalFcfa: true, clientName: true, clientPhone: true },
+      }),
+    ]);
+    const orderByRef = new Map<
+      string,
+      { reference: string; id: string; totalFcfa: number; clientName: string; city: string }
+    >(orders.map((o) => [o.reference, o]));
+    const resByRef = new Map<
+      string,
+      { reference: string; id: string; totalFcfa: number; clientName: string; clientPhone: string }
+    >(reservations.map((r) => [r.reference, r]));
+
+    res.json({
+      data: events.map((e) => {
+        const order = orderByRef.get(e.reference) ?? null;
+        const reservation = resByRef.get(e.reference) ?? null;
+        const match = Boolean(order || reservation);
+        return {
+          id: e.id,
+          reference: e.reference,
+          flow: e.flow,
+          provider: e.provider,
+          status: e.status,
+          amountFcfa: e.amountFcfa,
+          createdAt: e.createdAt.toISOString(),
+          match,
+          target:
+            order
+              ? {
+                  kind: 'order' as const,
+                  id: order.id,
+                  reference: order.reference,
+                  clientName: order.clientName,
+                  city: order.city,
+                  totalFcfa: order.totalFcfa,
+                }
+              : reservation
+                ? {
+                    kind: 'reservation' as const,
+                    id: reservation.id,
+                    reference: reservation.reference,
+                    clientName: reservation.clientName,
+                    clientPhone: reservation.clientPhone,
+                    totalFcfa: reservation.totalFcfa,
+                  }
+                : null,
+        };
+      }),
+    });
   } catch (e) {
     next(e);
   }

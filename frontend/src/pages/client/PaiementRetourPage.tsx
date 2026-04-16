@@ -1,13 +1,9 @@
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import {
-  markDemoReturnCancel,
-  markDemoReturnSuccess,
-} from '../../utils/demoPaymentRefs';
 import type { PaymentFlow } from '../../config/paymentLinks';
 
 /**
- * Page atterrissage après redirection Wave / OM (si return_url / cancel_url configurés).
+ * Atterrissage après redirection Wave / Orange Money (return_url / cancel_url).
  */
 const PaiementRetourPage = () => {
   const [params] = useSearchParams();
@@ -17,16 +13,6 @@ const PaiementRetourPage = () => {
   const ref = params.get('ref') ?? '';
 
   const safeFlow: PaymentFlow = flow === 'reservation' ? 'reservation' : 'order';
-
-  useEffect(() => {
-    if (!ref) return;
-    if (status === 'success') {
-      markDemoReturnSuccess(ref, { flow: safeFlow });
-    }
-    if (status === 'cancel') {
-      markDemoReturnCancel(ref, { flow: safeFlow });
-    }
-  }, [ref, status, safeFlow]);
 
   const title = useMemo(() => {
     if (status === 'success') return 'Retour de paiement';
@@ -42,13 +28,11 @@ const PaiementRetourPage = () => {
       >
         {title}
       </h1>
-      {ref && (
-        <p className="mb-2 font-mono text-sm text-tiktok-cyan">{ref}</p>
-      )}
+      {ref && <p className="mb-2 font-mono text-sm text-tiktok-cyan">{ref}</p>}
       {status === 'success' && (
         <p className="mb-6 text-sm leading-relaxed text-neutral-400">
-          Si ton opérateur a confirmé le paiement, Warignan poursuivra la commande ou la réservation.
-          Suis l’avancement avec la même référence sur la page Suivi.
+          Dès que le paiement est confirmé par l’opérateur, l’équipe Warignan met à jour ta commande ou
+          ta réservation. Utilise cette référence sur la page Suivi pour voir l’état en temps réel.
         </p>
       )}
       {status === 'cancel' && (

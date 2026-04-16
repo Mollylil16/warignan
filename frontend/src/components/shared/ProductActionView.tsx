@@ -102,7 +102,8 @@ const ProductActionView = ({
       </div>
 
       <p className="mt-6 text-center text-xs text-neutral-600">
-        Les prix et stocks sont indicatifs en démo. Connexion API à brancher ensuite.
+        Prix et disponibilité synchronisés avec le catalogue Warignan. Après paiement, suis ta commande
+        depuis l’onglet Suivi.
       </p>
     </main>
   );

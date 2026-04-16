@@ -103,9 +103,13 @@ Voir `.env.example`. Pour le frontend en local : `CORS_ORIGIN=http://localhost:5
 | GET | `/api/products/:id` | Non | Détail |
 | POST | `/api/products` | Vendeuse/admin | Créer |
 | PATCH | `/api/products/:id` | Vendeuse/admin | Modifier |
+| GET | `/api/promotions/active` | Non | Codes promo actifs (public) |
+| POST | `/api/promotions/quote` | Non | Simulation/remise (public) |
 | GET | `/api/orders` | Vendeuse/admin | Commandes |
+| POST | `/api/orders/checkout` | Non | Checkout commande (accepte `subtotalFcfa` + `promoCode?`) |
 | PATCH | `/api/orders/:id/step` | Vendeuse/admin | Étape commande |
 | GET | `/api/reservations` | Vendeuse/admin | Réservations |
+| POST | `/api/reservations/checkout` | Non | Checkout réservation (accepte `subtotalFcfa` + `promoCode?`) |
 | GET | `/api/tracking/:reference` | Non | Suivi unifié |
 | POST | `/api/webhooks/wave` | Non | Webhook (signature : TODO) |
 | POST | `/api/webhooks/orange-money` | Non | Idem |
