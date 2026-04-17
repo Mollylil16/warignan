@@ -6,6 +6,11 @@ import { listMeta, paginationQuerySchema, resolvePagination } from '../lib/pagin
 import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import { quotePromotion } from '../services/promotionQuote.js';
+import {
+  orderPaymentSummary,
+  orderStepRequiresFullPayment,
+  sumConfirmedPayments,
+} from '../services/paymentTotals.js';
 
 const router = Router();
 
@@ -121,21 +126,42 @@ router.get('/', async (req, res, next) => {
       }),
       prisma.order.count({ where }),
     ]);
+
+    const refs = orders.map((o) => o.reference);
+    const paidByRef = new Map<string, number>();
+    if (refs.length > 0) {
+      const sums = await prisma.paymentEvent.groupBy({
+        by: ['reference'],
+        where: { reference: { in: refs }, status: 'confirmed', flow: 'order' },
+        _sum: { amountFcfa: true },
+      });
+      for (const s of sums) {
+        paidByRef.set(s.reference, s._sum.amountFcfa ?? 0);
+      }
+    }
+
     res.json({
-      data: orders.map((o) => ({
-        id: o.id,
-        reference: o.reference,
-        clientName: o.clientName,
-        city: o.city,
-        itemsSummary: o.itemsSummary,
-        subtotalFcfa: o.subtotalFcfa,
-        discountFcfa: o.discountFcfa,
-        promoCode: o.promoCode,
-        totalFcfa: o.totalFcfa,
-        paidAt: o.paidAt?.toISOString() ?? null,
-        step: o.step,
-        createdAt: o.createdAt.toISOString(),
-      })),
+      data: orders.map((o) => {
+        const paid = paidByRef.get(o.reference) ?? 0;
+        const pay = orderPaymentSummary(o.totalFcfa, paid);
+        return {
+          id: o.id,
+          reference: o.reference,
+          clientName: o.clientName,
+          city: o.city,
+          itemsSummary: o.itemsSummary,
+          subtotalFcfa: o.subtotalFcfa,
+          discountFcfa: o.discountFcfa,
+          promoCode: o.promoCode,
+          totalFcfa: o.totalFcfa,
+          paidAt: o.paidAt?.toISOString() ?? null,
+          paidFcfaConfirmed: pay.paidFcfaConfirmed,
+          balanceDueFcfa: pay.balanceDueFcfa,
+          paymentStatus: pay.paymentStatus,
+          step: o.step,
+          createdAt: o.createdAt.toISOString(),
+        };
+      }),
       meta: listMeta(page, limit, total),
     });
   } catch (e) {
@@ -152,6 +178,23 @@ router.post('/bulk-step', async (req, res, next) => {
       })
       .parse(req.body);
 
+    const rows = await prisma.order.findMany({ where: { id: { in: body.ids } } });
+    if (rows.length !== body.ids.length) {
+      throw new HttpError(400, 'Certaines commandes sont introuvables.');
+    }
+    if (orderStepRequiresFullPayment(body.step)) {
+      for (const o of rows) {
+        const paid = await sumConfirmedPayments(o.reference, 'order');
+        if (paid < o.totalFcfa) {
+          throw new HttpError(
+            400,
+            `Commande ${o.reference} : encaissement incomplet (${paid} / ${o.totalFcfa} FCFA confirmés). ` +
+              `Impossible de passer en ${body.step} sans paiement intégral.`
+          );
+        }
+      }
+    }
+
     const result = await prisma.order.updateMany({
       where: { id: { in: body.ids } },
       data: { step: body.step },
@@ -167,6 +210,16 @@ router.patch('/:id/step', async (req, res, next) => {
     const body = z.object({ step: stepSchema }).parse(req.body);
     const order = await prisma.order.findUnique({ where: { id: req.params.id } });
     if (!order) throw new HttpError(404, 'Commande introuvable');
+    if (orderStepRequiresFullPayment(body.step)) {
+      const paid = await sumConfirmedPayments(order.reference, 'order');
+      if (paid < order.totalFcfa) {
+        throw new HttpError(
+          400,
+          `Encaissement incomplet (${paid} / ${order.totalFcfa} FCFA confirmés). ` +
+            `Emballage et expédition sont réservés au paiement intégral.`
+        );
+      }
+    }
     const updated = await prisma.order.update({
       where: { id: req.params.id },
       data: { step: body.step },

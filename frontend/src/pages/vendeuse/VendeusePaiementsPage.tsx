@@ -1,8 +1,22 @@
-import { type FormEvent, useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, RefreshCw, Search, XCircle } from 'lucide-react';
+import { type FormEvent, useCallback, useMemo, useState } from 'react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  RefreshCw,
+  Search,
+  XCircle,
+} from 'lucide-react';
 import PageHeader from '../../components/vendeuse/PageHeader';
-import { usePaymentsList, type StaffPaymentEventRow } from '../../hooks/usePayments';
+import { usePaymentsList, type StaffPaymentEventRow, type StaffPaymentsListResponse } from '../../hooks/usePayments';
+import { api, apiErrorMessage } from '../../services/api';
+import { downloadStaffPaymentsCsv } from '../../utils/paymentsCsvExport';
 import { formatPrice } from '../../utils/formatPrice';
+
+const PAYMENTS_PAGE_SIZES = [25, 50, 100] as const;
+const EXPORT_CHUNK = 100;
 
 function statusPill(status: string) {
   if (status === 'confirmed') return 'bg-status-green/15 text-status-green border-status-green/30';
@@ -22,6 +36,9 @@ const VendeusePaiementsPage = () => {
   const [provider, setProvider] = useState('');
   const [status, setStatus] = useState('');
   const [filterUnmatched, setFilterUnmatched] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(100);
+  const [exporting, setExporting] = useState(false);
 
   const params = useMemo(
     () => ({
@@ -29,12 +46,17 @@ const VendeusePaiementsPage = () => {
       flow: flow || undefined,
       provider: provider || undefined,
       status: status || undefined,
-      limit: 300,
+      page,
+      limit: pageSize,
     }),
-    [q, flow, provider, status]
+    [q, flow, provider, status, page, pageSize]
   );
 
-  const { data: rows = [], isPending, error, refetch } = usePaymentsList(params);
+  const { data: listPayload, isPending, error, refetch } = usePaymentsList(params);
+  const rows = listPayload?.data ?? [];
+  const total = listPayload?.total ?? 0;
+  const totalPages = listPayload?.totalPages ?? 1;
+  const currentPage = listPayload?.page ?? page;
 
   const filtered = useMemo(() => {
     const list = rows as StaffPaymentEventRow[];
@@ -51,23 +73,75 @@ const VendeusePaiementsPage = () => {
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
+    setPage(1);
     void refetch();
   };
+
+  const filterParamsForApi = useMemo(
+    () => ({
+      q: q.trim() || undefined,
+      flow: flow || undefined,
+      provider: provider || undefined,
+      status: status || undefined,
+    }),
+    [q, flow, provider, status]
+  );
+
+  const handleExportCsv = useCallback(async () => {
+    setExporting(true);
+    try {
+      const all: StaffPaymentEventRow[] = [];
+      let p = 1;
+      let totalPages = 1;
+      do {
+        const { data } = await api.get<StaffPaymentsListResponse>('/payments', {
+          params: { ...filterParamsForApi, page: p, limit: EXPORT_CHUNK },
+        });
+        all.push(...data.data);
+        totalPages = data.totalPages;
+        p += 1;
+      } while (p <= totalPages);
+
+      let rows = all;
+      if (filterUnmatched) {
+        rows = rows.filter((r) => !r.match);
+      }
+
+      const stamp = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
+      downloadStaffPaymentsCsv(rows, `paiements-${stamp}`);
+    } catch (err) {
+      window.alert(apiErrorMessage(err, 'Export CSV impossible.'));
+    } finally {
+      setExporting(false);
+    }
+  }, [filterParamsForApi, filterUnmatched]);
 
   return (
     <div className="max-w-6xl">
       <PageHeader
         title="Paiements"
-        description="Événements Wave / Orange Money / manuel. Match automatique sur commande/réservation."
+        description="Événements Wave / Orange Money / manuel. Cumul confirmé et reste sur objectif ; pagination 25–100 lignes ; export CSV des filtres actifs."
         actions={
-          <button
-            type="button"
-            onClick={() => void refetch()}
-            className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-white/10"
-          >
-            <RefreshCw className="h-4 w-4" strokeWidth={2} aria-hidden />
-            Actualiser
-          </button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              disabled={exporting || total === 0}
+              onClick={() => void handleExportCsv()}
+              className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+              title="Télécharge tous les événements correspondant aux filtres (recherche, flow, provider, statut). Le filtre « à traiter » du tableau est appliqué à l’export."
+            >
+              <Download className="h-4 w-4" strokeWidth={2} aria-hidden />
+              {exporting ? 'Export…' : 'Exporter CSV'}
+            </button>
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-white/10"
+            >
+              <RefreshCw className="h-4 w-4" strokeWidth={2} aria-hidden />
+              Actualiser
+            </button>
+          </div>
         }
       />
 
@@ -91,14 +165,20 @@ const VendeusePaiementsPage = () => {
             />
             <input
               value={q}
-              onChange={(e) => setQ(e.target.value)}
+              onChange={(e) => {
+                setPage(1);
+                setQ(e.target.value);
+              }}
               className="h-10 w-full rounded-lg border border-white/10 bg-black py-2 pl-10 pr-3 text-sm text-white"
               placeholder="Recherche (référence)…"
             />
           </div>
           <select
             value={flow}
-            onChange={(e) => setFlow(e.target.value)}
+            onChange={(e) => {
+              setPage(1);
+              setFlow(e.target.value);
+            }}
             className="h-10 rounded-lg border border-white/10 bg-black px-3 text-sm text-white"
           >
             <option value="">Tous flows</option>
@@ -107,7 +187,10 @@ const VendeusePaiementsPage = () => {
           </select>
           <select
             value={provider}
-            onChange={(e) => setProvider(e.target.value)}
+            onChange={(e) => {
+              setPage(1);
+              setProvider(e.target.value);
+            }}
             className="h-10 rounded-lg border border-white/10 bg-black px-3 text-sm text-white"
           >
             <option value="">Tous providers</option>
@@ -117,7 +200,10 @@ const VendeusePaiementsPage = () => {
           </select>
           <select
             value={status}
-            onChange={(e) => setStatus(e.target.value)}
+            onChange={(e) => {
+              setPage(1);
+              setStatus(e.target.value);
+            }}
             className="h-10 rounded-lg border border-white/10 bg-black px-3 text-sm text-white"
           >
             <option value="">Tous statuts</option>
@@ -128,31 +214,58 @@ const VendeusePaiementsPage = () => {
         </div>
 
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-          <label className="flex items-center gap-2 text-xs font-semibold text-neutral-400">
-            <input
-              type="checkbox"
-              checked={filterUnmatched}
-              onChange={(e) => setFilterUnmatched(e.target.checked)}
-              className="h-4 w-4 accent-tiktok-cyan"
-            />
-            Afficher seulement “à traiter”
-          </label>
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="flex items-center gap-2 text-xs font-semibold text-neutral-400">
+              <input
+                type="checkbox"
+                checked={filterUnmatched}
+                onChange={(e) => setFilterUnmatched(e.target.checked)}
+                className="h-4 w-4 accent-tiktok-cyan"
+              />
+              Afficher seulement “à traiter”
+            </label>
+            <label className="flex items-center gap-2 text-xs font-semibold text-neutral-400">
+              <span className="text-neutral-500">Lignes par page</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPage(1);
+                  setPageSize(Number(e.target.value));
+                }}
+                className="h-9 rounded-lg border border-white/10 bg-black px-2 text-sm text-white"
+              >
+                {PAYMENTS_PAGE_SIZES.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
           <div className="flex flex-wrap items-center gap-4 text-xs text-neutral-500">
-            <span>Confirmés: {formatPrice(confirmedSum)}</span>
+            <span title="Uniquement les lignes affichées sur cette page (filtre « à traiter » inclus).">
+              Sur cette page — confirmés: {formatPrice(confirmedSum)}
+            </span>
             <span className={failedCount > 0 ? 'text-red-300' : ''}>Échecs: {failedCount}</span>
             <span className={unmatchedCount > 0 ? 'text-amber-200' : ''}>
               À traiter: {unmatchedCount}
+            </span>
+            <span className="text-neutral-600">
+              Total en base: {total.toLocaleString('fr-FR')} évén.
             </span>
           </div>
         </div>
       </form>
 
       <div className="overflow-x-auto rounded-xl border border-white/10">
-        <table className="w-full min-w-[980px] text-left text-sm">
+        <table className="w-full min-w-[1180px] text-left text-sm">
           <thead className="border-b border-white/10 bg-[#111] text-xs uppercase tracking-wide text-neutral-500">
             <tr>
               <th className="px-4 py-3 font-semibold">Référence</th>
               <th className="px-4 py-3 font-semibold">Montant</th>
+              <th className="px-4 py-3 font-semibold">Cumul confirmé</th>
+              <th className="px-4 py-3 font-semibold">Objectif</th>
+              <th className="px-4 py-3 font-semibold">Reste objectif</th>
               <th className="px-4 py-3 font-semibold">Flow</th>
               <th className="px-4 py-3 font-semibold">Provider</th>
               <th className="px-4 py-3 font-semibold">Statut</th>
@@ -166,6 +279,26 @@ const VendeusePaiementsPage = () => {
               <tr key={r.id} className="bg-[#0c0c0c] hover:bg-white/[0.02]">
                 <td className="px-4 py-3 font-mono text-xs text-tiktok-cyan">{r.reference}</td>
                 <td className="px-4 py-3 font-semibold text-white">{formatPrice(r.amountFcfa)}</td>
+                <td className="px-4 py-3 text-neutral-200">{formatPrice(r.confirmedCumulativeFcfa ?? 0)}</td>
+                <td className="px-4 py-3 text-neutral-300">
+                  {r.expectedFcfa != null ? formatPrice(r.expectedFcfa) : '—'}
+                </td>
+                <td className="px-4 py-3">
+                  {r.balanceAfterFcfa != null ? (
+                    <span
+                      className={
+                        r.balanceAfterFcfa === 0
+                          ? 'font-semibold text-status-green'
+                          : 'font-medium text-amber-200'
+                      }
+                    >
+                      {formatPrice(r.balanceAfterFcfa)}
+                      {r.balanceAfterFcfa === 0 ? ' · soldé' : ''}
+                    </span>
+                  ) : (
+                    <span className="text-neutral-600">—</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-neutral-300">{r.flow}</td>
                 <td className="px-4 py-3 text-neutral-300">{r.provider ?? '—'}</td>
                 <td className="px-4 py-3">
@@ -213,6 +346,41 @@ const VendeusePaiementsPage = () => {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#111] px-4 py-3 text-sm text-neutral-300">
+        <p>
+          Page <span className="font-semibold text-white">{currentPage}</span> sur{' '}
+          <span className="font-semibold text-white">{totalPages}</span>
+          {total > 0 ? (
+            <span className="text-neutral-500">
+              {' '}
+              ({filtered.length} ligne{filtered.length > 1 ? 's' : ''} sur cette page
+              {filterUnmatched ? ', filtre « à traiter » actif' : ''} ·{' '}
+              {total.toLocaleString('fr-FR')} au total)
+            </span>
+          ) : null}
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            disabled={currentPage <= 1 || isPending}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-medium text-neutral-200 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <ChevronLeft className="h-4 w-4" strokeWidth={2} aria-hidden />
+            Précédent
+          </button>
+          <button
+            type="button"
+            disabled={currentPage >= totalPages || isPending}
+            onClick={() => setPage((p) => p + 1)}
+            className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-medium text-neutral-200 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Suivant
+            <ChevronRight className="h-4 w-4" strokeWidth={2} aria-hidden />
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -135,8 +135,8 @@ const VendeuseLivraisonsPage = () => {
 
       {dayDeliveries.length === 0 ? (
         <p className="rounded-xl border border-dashed border-white/15 bg-[#111] p-8 text-center text-sm text-neutral-500">
-          Aucune livraison ce jour. Les livraisons sont créées côté base (seed) ou à ajouter via
-          l’admin.
+          Aucune livraison planifiée pour cette date. Les créneaux apparaissent ici lorsque des
+          livraisons existent dans la base (créées avec la commande ou depuis un outil interne).
         </p>
       ) : (
         <ul className="space-y-4">

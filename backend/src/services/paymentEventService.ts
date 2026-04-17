@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
+import { syncOrderPaidAtFromEvents } from './paymentTotals.js';
 
 export async function recordPaymentEvent(data: {
   reference: string;
@@ -9,7 +10,7 @@ export async function recordPaymentEvent(data: {
   provider?: string | null;
   payload?: Prisma.InputJsonValue;
 }) {
-  return prisma.paymentEvent.create({
+  const row = await prisma.paymentEvent.create({
     data: {
       reference: data.reference.trim().toUpperCase(),
       flow: data.flow,
@@ -19,4 +20,8 @@ export async function recordPaymentEvent(data: {
       payload: data.payload ?? undefined,
     },
   });
+  if (data.status === 'confirmed' && data.flow === 'order') {
+    await syncOrderPaidAtFromEvents(data.reference);
+  }
+  return row;
 }

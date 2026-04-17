@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { STAFF_LIST_LIMIT } from '../constants/apiPagination';
 import { api } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 
@@ -21,7 +22,7 @@ export function useDeliveriesList(params?: { status?: string; dateISO?: string }
     queryKey: ['deliveries', token, params?.status, params?.dateISO],
     queryFn: async () => {
       const { data } = await api.get<{ data: DeliveryRow[] }>('/deliveries', {
-        params: { page: 1, limit: 500, ...params },
+        params: { page: 1, limit: STAFF_LIST_LIMIT, ...params },
       });
       return data.data;
     },

@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
+import { STAFF_LIST_LIMIT } from '../constants/apiPagination';
 import { api } from '../services/api';
 import { useAuthStore } from '../store/authStore';
+
+export type OrderPaymentStatus = 'unpaid' | 'partial' | 'full';
 
 export type StaffOrderRow = {
   id: string;
@@ -13,6 +16,10 @@ export type StaffOrderRow = {
   promoCode?: string | null;
   totalFcfa: number;
   paidAt: string | null;
+  /** Somme des paiements confirmés (Wave / OM / manuel) rattachés à cette commande. */
+  paidFcfaConfirmed: number;
+  balanceDueFcfa: number;
+  paymentStatus: OrderPaymentStatus;
   step: string;
   createdAt: string;
 };
@@ -42,9 +49,17 @@ export function useOrdersList(params?: {
     ],
     queryFn: async () => {
       const { data } = await api.get<{ data: StaffOrderRow[] }>('/orders', {
-        params: { page: 1, limit: 200, ...params },
+        params: { page: 1, limit: STAFF_LIST_LIMIT, ...params },
       });
-      return data.data;
+      return data.data.map((row) => {
+        const paid = row.paidFcfaConfirmed ?? 0;
+        const total = row.totalFcfa;
+        const balance = row.balanceDueFcfa ?? Math.max(0, total - paid);
+        const status =
+          row.paymentStatus ??
+          (paid >= total ? 'full' : paid > 0 ? 'partial' : ('unpaid' as const));
+        return { ...row, paidFcfaConfirmed: paid, balanceDueFcfa: balance, paymentStatus: status };
+      });
     },
     enabled: Boolean(token),
   });

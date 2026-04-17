@@ -7,6 +7,7 @@ import { listMeta, paginationQuerySchema, resolvePagination } from '../lib/pagin
 import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import { quotePromotion } from '../services/promotionQuote.js';
+import { reservationDepositSummary, sumConfirmedPayments } from '../services/paymentTotals.js';
 
 const router = Router();
 
@@ -96,21 +97,24 @@ const patchBodySchema = z
     message: 'Au moins un champ requis',
   });
 
-function reservationToDto(r: {
-  id: string;
-  reference: string;
-  clientName: string;
-  clientPhone: string;
-  productsSummary: string;
-  subtotalFcfa: number;
-  discountFcfa: number;
-  promoCode: string | null;
-  totalFcfa: number;
-  depositFcfa: number;
-  depositStatus: DepositStatus;
-  workflow: ReservationWorkflow;
-  createdAt: Date;
-}) {
+function reservationToDto(
+  r: {
+    id: string;
+    reference: string;
+    clientName: string;
+    clientPhone: string;
+    productsSummary: string;
+    subtotalFcfa: number;
+    discountFcfa: number;
+    promoCode: string | null;
+    totalFcfa: number;
+    depositFcfa: number;
+    depositStatus: DepositStatus;
+    workflow: ReservationWorkflow;
+    createdAt: Date;
+  },
+  depositPay: ReturnType<typeof reservationDepositSummary>
+) {
   return {
     id: r.id,
     reference: r.reference,
@@ -125,6 +129,9 @@ function reservationToDto(r: {
     depositStatus: r.depositStatus,
     workflow: r.workflow,
     createdAt: r.createdAt.toISOString(),
+    paidFcfaConfirmed: depositPay.paidFcfaConfirmed,
+    depositShortfallFcfa: depositPay.depositShortfallFcfa,
+    depositCoverage: depositPay.depositCoverage,
   };
 }
 
@@ -197,8 +204,25 @@ router.get('/', async (req, res, next) => {
       prisma.reservation.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take: limit }),
       prisma.reservation.count({ where }),
     ]);
+
+    const resRefs = rows.map((r) => r.reference);
+    const paidResByRef = new Map<string, number>();
+    if (resRefs.length > 0) {
+      const sums = await prisma.paymentEvent.groupBy({
+        by: ['reference'],
+        where: { reference: { in: resRefs }, status: 'confirmed', flow: 'reservation' },
+        _sum: { amountFcfa: true },
+      });
+      for (const s of sums) {
+        paidResByRef.set(s.reference, s._sum.amountFcfa ?? 0);
+      }
+    }
+
     res.json({
-      data: rows.map(reservationToDto),
+      data: rows.map((r) => {
+        const paid = paidResByRef.get(r.reference) ?? 0;
+        return reservationToDto(r, reservationDepositSummary(r.depositFcfa, paid));
+      }),
       meta: listMeta(page, limit, total),
     });
   } catch (e) {
@@ -241,6 +265,16 @@ router.patch('/:id', async (req, res, next) => {
       throw new HttpError(400, 'L’acompte doit être « paid » pour valider');
     }
 
+    if (nextDeposit === 'paid' && current.depositStatus !== 'paid') {
+      const paidSum = await sumConfirmedPayments(current.reference, 'reservation');
+      if (paidSum < current.depositFcfa) {
+        throw new HttpError(
+          400,
+          `Paiements confirmés insuffisants pour marquer l’acompte payé : ${paidSum} / ${current.depositFcfa} FCFA.`
+        );
+      }
+    }
+
     const updated = await prisma.reservation.update({
       where: { id: req.params.id },
       data: {
@@ -248,7 +282,8 @@ router.patch('/:id', async (req, res, next) => {
         workflow: nextWorkflow,
       },
     });
-    res.json(reservationToDto(updated));
+    const paidRes = await sumConfirmedPayments(updated.reference, 'reservation');
+    res.json(reservationToDto(updated, reservationDepositSummary(updated.depositFcfa, paidRes)));
   } catch (e) {
     next(e);
   }

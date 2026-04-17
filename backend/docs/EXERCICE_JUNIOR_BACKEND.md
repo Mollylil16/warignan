@@ -5,7 +5,7 @@ Ce document liste ce qui **n’est pas fini** volontairement pour ton premier ex
 ## Contexte
 
 - Stack : **Node.js**, **Express**, **TypeScript**, **Prisma**, **SQLite** (`dev.db`).
-- Comptes seed : `vendeuse@warignan.shop` / `vendeuse123`, `admin@warignan.shop` / `admin123`.
+- Comptes seed : vendeuse `warignan` / `wgn225` (ou e-mail complet `@warignan.shop`), `admin` / `admin123` (le seed ne remplit plus de données métier fictives).
 
 ## Tâches suggérées (par priorité)
 

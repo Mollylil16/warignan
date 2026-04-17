@@ -19,7 +19,7 @@ const fmt = (iso: string) =>
   new Date(iso).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
 
 const VendeuseDashboardPage = () => {
-  const { data: overview } = useVendeuseOverview();
+  const { data: overview, isPending: overviewLoading, isError: overviewError } = useVendeuseOverview();
   const { data: promosActives = 0 } = useActivePromotionsCount();
 
   const awaitingValidation = overview?.kpi.reservations.awaiting_validation ?? 0;
@@ -49,71 +49,86 @@ const VendeuseDashboardPage = () => {
         description="Vue synthétique alimentée par l’API."
       />
 
-      <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="À valider (acompte reçu)"
-          value={awaitingValidation}
-          hint="Réservations en attente de ton OK"
-          tone="purple"
-          to="/vendeuse/reservations"
-        />
-        <StatCard
-          label="Acomptes en attente"
-          value={awaitingDeposit}
-          hint="Clients pas encore payés"
-          tone="orange"
-          to="/vendeuse/reservations"
-        />
-        <StatCard
-          label="Commandes actives"
-          value={prepOrders}
-          hint="Préparation ou emballage"
-          tone="pink"
-          to="/vendeuse/commandes"
-        />
-        <StatCard
-          label="Expédiées aujourd’hui"
-          value={shippedToday}
-          hint="Commandes passées à expédiée"
-          tone="cyan"
-          to="/vendeuse/commandes"
-        />
-      </div>
+      {overviewError && (
+        <p className="mb-6 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
+          Impossible de charger les indicateurs. Vérifie que l’API tourne et que tu es bien connectée.
+        </p>
+      )}
+      {overviewLoading && !overview && !overviewError && (
+        <p className="mb-6 text-sm text-neutral-500">Chargement des indicateurs…</p>
+      )}
 
-      <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="rounded-xl border border-white/10 bg-[#111] p-5">
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-            <ReceiptText className="h-4 w-4 text-tiktok-cyan" strokeWidth={2} aria-hidden />
-            Paiements (24h)
+      {overview && (
+        <>
+          <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              label="À valider (acompte reçu)"
+              value={awaitingValidation}
+              hint="Réservations en attente de ton OK"
+              tone="purple"
+              to="/vendeuse/reservations"
+            />
+            <StatCard
+              label="Acomptes en attente"
+              value={awaitingDeposit}
+              hint="Clients pas encore payés"
+              tone="orange"
+              to="/vendeuse/reservations"
+            />
+            <StatCard
+              label="Commandes actives"
+              value={prepOrders}
+              hint="Préparation ou emballage"
+              tone="pink"
+              to="/vendeuse/commandes"
+            />
+            <StatCard
+              label="Expédiées aujourd’hui"
+              value={shippedToday}
+              hint="Commandes passées à expédiée"
+              tone="cyan"
+              to="/vendeuse/commandes"
+            />
           </div>
-          <p className="text-2xl font-bold text-white">{formatPrice(payments24hAmount)}</p>
-          <p className="mt-1 text-xs text-neutral-500">
-            {payments24hFailed > 0 ? `${payments24hFailed} échec(s) à traiter` : 'Aucun échec signalé'}
-          </p>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-[#111] p-5">
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-            <ShieldAlert className="h-4 w-4 text-amber-300" strokeWidth={2} aria-hidden />
-            Anomalies (7j)
+
+          <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-xl border border-white/10 bg-[#111] p-5">
+              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
+                <ReceiptText className="h-4 w-4 text-tiktok-cyan" strokeWidth={2} aria-hidden />
+                Paiements (24h)
+              </div>
+              <p className="text-2xl font-bold text-white">{formatPrice(payments24hAmount)}</p>
+              <p className="mt-1 text-xs text-neutral-500">
+                {payments24hFailed > 0 ? `${payments24hFailed} échec(s) à traiter` : 'Aucun échec signalé'}
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-[#111] p-5">
+              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
+                <ShieldAlert className="h-4 w-4 text-amber-300" strokeWidth={2} aria-hidden />
+                Anomalies (7j)
+              </div>
+              <p className="text-2xl font-bold text-white">{anomalies7d}</p>
+              <p className="mt-1 text-xs text-neutral-500">
+                Références payées introuvables (à réconcilier)
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-[#111] p-5">
+              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
+                <Percent className="h-4 w-4 text-tiktok-pink" strokeWidth={2} aria-hidden />
+                Promotions actives
+              </div>
+              <p className="text-2xl font-bold text-white">{promosActives}</p>
+              <p className="mt-1 text-xs text-neutral-500">Visible côté boutique (API publique)</p>
+            </div>
           </div>
-          <p className="text-2xl font-bold text-white">{anomalies7d}</p>
-          <p className="mt-1 text-xs text-neutral-500">
-            Références payées introuvables (à réconcilier)
-          </p>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-[#111] p-5">
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-            <Percent className="h-4 w-4 text-tiktok-pink" strokeWidth={2} aria-hidden />
-            Promotions actives
-          </div>
-          <p className="text-2xl font-bold text-white">{promosActives}</p>
-          <p className="mt-1 text-xs text-neutral-500">Visible côté boutique (API publique)</p>
-        </div>
-      </div>
+        </>
+      )}
 
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-bold text-white">Raccourcis</h2>
-        <span className="text-xs text-neutral-500">{promosActives} code(s) promo valide(s) aujourd’hui</span>
+        <span className="text-xs text-neutral-500">
+          {promosActives} code{promosActives !== 1 ? 's' : ''} promo actif{promosActives !== 1 ? 's' : ''} (API)
+        </span>
       </div>
       <div className="mb-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {shortcuts.map(({ to, label, icon: Icon, desc }) => (
@@ -135,7 +150,11 @@ const VendeuseDashboardPage = () => {
 
       <h2 className="mb-4 text-lg font-bold text-white">À faire maintenant</h2>
       <div className="overflow-hidden rounded-xl border border-white/10 bg-[#0c0c0c]">
-        {todo.length === 0 ? (
+        {overviewLoading && !overview && !overviewError ? (
+          <p className="p-5 text-sm text-neutral-500">Chargement de la file…</p>
+        ) : !overview ? (
+          <p className="p-5 text-sm text-neutral-500">Indicateurs indisponibles.</p>
+        ) : todo.length === 0 ? (
           <p className="p-5 text-sm text-neutral-500">Rien d’urgent détecté.</p>
         ) : (
           <ul className="divide-y divide-white/5">
@@ -149,7 +168,11 @@ const VendeuseDashboardPage = () => {
                 <div className="shrink-0 text-right">
                   <p className="text-[11px] text-neutral-600">{fmt(t.createdAt)}</p>
                   <Link
-                    to={t.kind === 'order' ? '/vendeuse/commandes' : '/vendeuse/reservations'}
+                    to={
+                      t.kind === 'order'
+                        ? `/vendeuse/commandes?q=${encodeURIComponent(t.reference)}`
+                        : `/vendeuse/reservations?q=${encodeURIComponent(t.reference)}`
+                    }
                     className="mt-2 inline-block rounded-lg border border-white/15 px-3 py-1.5 text-xs font-semibold text-neutral-300 hover:bg-white/5 hover:text-white"
                   >
                     Ouvrir

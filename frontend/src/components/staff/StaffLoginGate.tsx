@@ -49,15 +49,22 @@ const StaffLoginGate = ({ title, allowedRoles, children }: Props) => {
           <p className="mb-6 text-xs text-neutral-500">Connexion sécurisée (API)</p>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-neutral-400">E-mail</label>
+              <label className="mb-1 block text-xs font-semibold text-neutral-400">
+                Identifiant ou e-mail
+              </label>
               <input
-                type="email"
+                type="text"
                 required
                 autoComplete="username"
+                placeholder="warignan"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-lg border border-white/10 bg-black px-3 py-2 text-sm text-white focus:border-tiktok-cyan/50 focus:outline-none"
+                className="w-full rounded-lg border border-white/10 bg-black px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-tiktok-cyan/50 focus:outline-none"
               />
+              <p className="mt-1 text-[10px] text-neutral-600">
+                Identifiant court (ex. <span className="font-mono text-neutral-500">warignan</span>)
+                ou e-mail complet.
+              </p>
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-neutral-400">Mot de passe</label>

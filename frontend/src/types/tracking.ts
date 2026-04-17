@@ -11,6 +11,9 @@ export type TrackingOrder = {
   promoCode: string | null;
   totalFcfa: number;
   paidAt: string | null;
+  paidFcfaConfirmed: number;
+  balanceDueFcfa: number;
+  paymentStatus: 'unpaid' | 'partial' | 'full';
   step: OrderStep;
 };
 
@@ -28,6 +31,9 @@ export type TrackingReservation = {
   depositStatus: DepositStatus;
   workflow: ReservationWorkflow;
   createdAt: string;
+  paidFcfaConfirmed: number;
+  depositShortfallFcfa: number;
+  depositCoverage: 'none' | 'partial' | 'full';
 };
 
 export type ApiPaymentEventRow = {

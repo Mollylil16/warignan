@@ -4,6 +4,7 @@ import { RefreshCw, Search } from 'lucide-react';
 import type { OrderStep, ReservationWorkflow } from '../../types/domain';
 import type { TrackingOrder, TrackingReservation } from '../../types/tracking';
 import { useClientTracking } from '../../hooks/useClientTracking';
+import WavePendingEncart from '../../components/payment/WavePendingEncart';
 import { formatPrice } from '../../utils/formatPrice';
 
 const orderStepClientLabel: Record<OrderStep, string> = {
@@ -171,6 +172,11 @@ const SuiviCommandePage = () => {
 function OrderTrackingCard({ order }: { order: TrackingOrder }) {
   const steps: OrderStep[] = ['preparation', 'emballage', 'expediee', 'livree'];
   const idx = steps.indexOf(order.step);
+  const paid = order.paidFcfaConfirmed ?? 0;
+  const balance = order.balanceDueFcfa ?? Math.max(0, order.totalFcfa - paid);
+  const payStatus =
+    order.paymentStatus ??
+    (paid >= order.totalFcfa ? 'full' : paid > 0 ? 'partial' : 'unpaid');
 
   return (
     <article className="rounded-xl border border-white/10 bg-[#111] p-5">
@@ -194,6 +200,16 @@ function OrderTrackingCard({ order }: { order: TrackingOrder }) {
         <div className="mt-2 flex justify-between text-base font-bold text-tiktok-pink">
           <span>Total</span>
           <span>{formatPrice(order.totalFcfa)}</span>
+        </div>
+        <div className="mt-3 border-t border-white/10 pt-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-neutral-400">Déjà payé (tracé Wave / OM)</span>
+            <span className="font-semibold text-tiktok-cyan">{formatPrice(paid)}</span>
+          </div>
+          <div className="mt-1 flex justify-between text-sm">
+            <span className="text-neutral-400">Reste à payer</span>
+            <span className="font-semibold text-tiktok-pink">{formatPrice(balance)}</span>
+          </div>
         </div>
       </div>
 
@@ -221,13 +237,16 @@ function OrderTrackingCard({ order }: { order: TrackingOrder }) {
         })}
       </ol>
       <p className="mt-4 text-xs text-neutral-600">
-        {order.paidAt
-          ? `Paiement enregistré le ${new Date(order.paidAt).toLocaleString('fr-FR', {
+        {payStatus === 'full' && order.paidAt
+          ? `Solde complet enregistré le ${new Date(order.paidAt).toLocaleString('fr-FR', {
               dateStyle: 'short',
               timeStyle: 'short',
-            })}`
-          : 'Paiement : en attente de confirmation côté boutique.'}
+            })} — la boutique peut enchaîner la préparation / livraison.`
+          : payStatus === 'partial'
+            ? `Paiement partiel : il manque encore ${formatPrice(balance)} pour couvrir la commande. L’expédition reste bloquée côté boutique tant que le total n’est pas atteint.`
+            : 'Aucun paiement confirmé pour l’instant — utilise le lien Wave une fois prêt.'}
       </p>
+      {payStatus !== 'full' && <WavePendingEncart />}
     </article>
   );
 }
@@ -270,9 +289,28 @@ function ReservationTrackingCard({ reservation }: { reservation: TrackingReserva
               : 'Échec'}
         </span>
       </p>
+      <p className="mb-2 text-xs text-neutral-500">
+        Encaissé (tracé) :{' '}
+        <span className="font-semibold text-tiktok-cyan">
+          {formatPrice(reservation.paidFcfaConfirmed ?? 0)}
+        </span>
+        {reservation.depositCoverage !== 'full' && reservation.depositStatus === 'pending' && (
+          <>
+            {' '}
+            — manque{' '}
+            <span className="text-amber-200">
+              {formatPrice(reservation.depositShortfallFcfa ?? reservation.depositFcfa)}
+            </span>{' '}
+            sur l’acompte.
+          </>
+        )}
+      </p>
       <p className="rounded-lg border border-white/10 bg-black/30 p-3 text-sm text-neutral-300">
         {reservationWorkflowLabel[reservation.workflow]}
       </p>
+      {reservation.workflow !== 'cancelled' &&
+        reservation.depositStatus === 'pending' &&
+        reservation.depositCoverage !== 'full' && <WavePendingEncart />}
     </article>
   );
 }

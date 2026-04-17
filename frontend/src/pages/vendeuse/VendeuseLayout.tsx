@@ -1,6 +1,8 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { type FormEvent, useState } from 'react';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Bell, LogOut, Search } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import { useVendeuseOverview } from '../../hooks/useVendeuseOverview';
 
 const links: { to: string; label: string; end?: boolean }[] = [
   { to: '/vendeuse', label: "Vue d'ensemble", end: true },
@@ -14,8 +16,22 @@ const links: { to: string; label: string; end?: boolean }[] = [
 ];
 
 const VendeuseLayout = () => {
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const { data: overview } = useVendeuseOverview();
+  const [headerSearch, setHeaderSearch] = useState('');
+
+  const todoCount = overview?.todo?.length ?? 0;
+
+  const submitHeaderSearch = (e: FormEvent) => {
+    e.preventDefault();
+    const t = headerSearch.trim();
+    if (!t) return;
+    const toReservations = /^WRG-RES/i.test(t);
+    const path = toReservations ? '/vendeuse/reservations' : '/vendeuse/commandes';
+    navigate(`${path}?q=${encodeURIComponent(t)}`);
+  };
 
   return (
     <div className="flex min-h-screen bg-[#070707] text-white">
@@ -52,7 +68,11 @@ const VendeuseLayout = () => {
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b border-white/10 bg-[#070707]/90 px-4 py-3 backdrop-blur-md sm:px-6">
-          <div className="relative min-w-[200px] max-w-md flex-1">
+          <form
+            onSubmit={submitHeaderSearch}
+            className="relative min-w-[200px] max-w-md flex-1"
+            role="search"
+          >
             <Search
               className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500"
               strokeWidth={2}
@@ -60,20 +80,31 @@ const VendeuseLayout = () => {
             />
             <input
               type="search"
-              placeholder="Rechercher commande, client, référence…"
+              value={headerSearch}
+              onChange={(e) => setHeaderSearch(e.target.value)}
+              placeholder="Réf., client, ville… (WRG-RES… → réservations)"
               className="w-full rounded-lg border border-white/10 bg-[#111] py-2 pl-10 pr-3 text-sm text-white placeholder:text-neutral-600 focus:border-reserve-purple/50 focus:outline-none focus:ring-1 focus:ring-reserve-purple/40"
-              aria-label="Recherche"
+              aria-label="Rechercher commandes ou réservations"
             />
-          </div>
+          </form>
           <div className="ml-auto flex items-center gap-3">
-            <button
-              type="button"
+            <Link
+              to="/vendeuse"
               className="relative rounded-lg p-2 text-neutral-400 hover:bg-white/10 hover:text-white"
-              aria-label="Notifications"
+              aria-label={
+                todoCount > 0
+                  ? `Tâches urgentes : ${todoCount} — ouvrir le tableau de bord`
+                  : 'Tableau de bord — rien d’urgent'
+              }
+              title="Tableau de bord"
             >
               <Bell className="h-5 w-5" strokeWidth={2} />
-              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-tiktok-pink" />
-            </button>
+              {todoCount > 0 && (
+                <span className="absolute right-0.5 top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-tiktok-pink px-1 text-[10px] font-bold text-white">
+                  {todoCount > 9 ? '9+' : todoCount}
+                </span>
+              )}
+            </Link>
             <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111] py-1 pl-1 pr-2">
               <div
                 className="flex h-8 w-8 items-center justify-center rounded-md bg-gradient-to-br from-reserve-purple to-tiktok-pink text-xs font-bold text-white"

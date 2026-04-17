@@ -28,7 +28,7 @@ npm run db:seed
 npm run dev
 ```
 
-Comptes seed backend : `vendeuse@warignan.shop` / `vendeuse123`, `admin@warignan.shop` / `admin123`.
+Comptes seed backend : vendeuse **`warignan`** / **`wgn225`** (l’e-mail stocké reste `warignan@warignan.shop` ; la connexion accepte aussi le court identifiant), **`admin`** / **`admin123`**, **`livreur`** / **`livreur123`** (même principe avec `@warignan.shop`). Le seed ne crée **que ces comptes** : pas de commandes, promos ni catalogue fictifs (tu ajoutes les vrais articles depuis l’espace vendeuse ou l’admin).
 
 ## Promotions (prod)
 

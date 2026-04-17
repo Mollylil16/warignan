@@ -80,6 +80,32 @@ export function buildPaymentRedirectUrl(
   }
 }
 
+/**
+ * Lien Wave : les pages marchandes `pay.wave.com/m/...` sont fixes — n’y ajoute pas de query
+ * (risque de casser la page Wave). Référence + montant restent affichés à côté pour le client.
+ */
+export function buildWaveRedirectUrl(
+  baseUrl: string,
+  params: {
+    amountFcfa: number;
+    reference: string;
+    flow: PaymentFlow;
+  },
+  options?: { appendReturnUrls?: boolean }
+): string {
+  const trimmed = baseUrl.trim();
+  if (!trimmed) return '';
+  try {
+    const u = new URL(trimmed);
+    if (u.hostname === 'pay.wave.com' && u.pathname.includes('/m/')) {
+      return trimmed;
+    }
+  } catch {
+    // URL non absolue : fallback comme lien générique avec paramètres
+  }
+  return buildPaymentRedirectUrl(trimmed, params, options);
+}
+
 export function redirectToExternalPayment(url: string): void {
   if (!url) return;
   window.location.assign(url);

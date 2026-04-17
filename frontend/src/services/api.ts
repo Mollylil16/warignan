@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const DEFAULT_API = 'http://localhost:3000/api';
+/** En dev, Vite proxy `/api` → backend. En prod, définir `VITE_API_BASE_URL` si l’API est sur un autre domaine. */
+const DEFAULT_API = '/api';
 
 const rawBase =
   typeof import.meta.env.VITE_API_BASE_URL === 'string'

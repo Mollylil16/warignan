@@ -1,5 +1,6 @@
-import { type FormEvent, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Copy, Filter, X } from 'lucide-react';
 import PageHeader from '../../components/vendeuse/PageHeader';
 import type { OrderStep } from '../../types/domain';
@@ -18,7 +19,14 @@ const stepLabel: Record<OrderStep, string> = {
 
 const VendeuseCommandesPage = () => {
   const qc = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlQ = searchParams.get('q')?.trim() || '';
   const [q, setQ] = useState('');
+
+  useEffect(() => {
+    if (!searchParams.has('q')) return;
+    setQ(searchParams.get('q') ?? '');
+  }, [searchParams]);
   const [stepFilter, setStepFilter] = useState<OrderStep | ''>('');
   const [city, setCity] = useState('');
   const [fromISO, setFromISO] = useState('');
@@ -70,9 +78,30 @@ const VendeuseCommandesPage = () => {
   const asStep = (s: string): OrderStep =>
     steps.includes(s as OrderStep) ? (s as OrderStep) : 'preparation';
 
+  const orderFullyPaid = (o: StaffOrderRow) => o.paymentStatus === 'full';
+
+  const selectableStepsFor = (o: StaffOrderRow): OrderStep[] =>
+    orderFullyPaid(o)
+      ? steps
+      : asStep(o.step) === 'preparation'
+        ? ['preparation']
+        : ['preparation', asStep(o.step)];
+
+  const canAdvanceOrder = (o: StaffOrderRow) =>
+    asStep(o.step) !== 'livree' && orderFullyPaid(o);
+
   const selectedIds = Object.entries(selected)
     .filter(([, v]) => v)
     .map(([id]) => id);
+
+  const selectedRows = useMemo(
+    () =>
+      selectedIds
+        .map((id) => (orders as StaffOrderRow[]).find((x) => x.id === id))
+        .filter((x): x is StaffOrderRow => Boolean(x)),
+    [selectedIds, orders]
+  );
+  const bulkBlockShipment = selectedRows.some((o) => !orderFullyPaid(o));
 
   const openDrawer = (id: string) => setDrawerId(id);
   const drawerOrder = (orders as StaffOrderRow[]).find((o) => o.id === drawerId) ?? null;
@@ -93,6 +122,14 @@ const VendeuseCommandesPage = () => {
     setToISO('');
     setMinTotal('');
     setMaxTotal('');
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('q');
+        return next;
+      },
+      { replace: true }
+    );
   };
 
   const handleFilterSubmit = (e: FormEvent) => {
@@ -104,8 +141,19 @@ const VendeuseCommandesPage = () => {
     <div className="max-w-6xl">
       <PageHeader
         title="Commandes"
-        description="Pipeline connecté à l’API : chaque changement d’étape est enregistré sur le serveur."
+        description="Les paiements Wave / Orange Money / manuels sont cumulés par référence. Emballage et expédition ne sont possibles qu’une fois le total commande entièrement encaissé (anti-paiement partiel malveillant)."
       />
+
+      {urlQ && (
+        <p className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-white/10 bg-[#111] px-3 py-2 text-sm text-neutral-400">
+          <span>
+            Recherche : <span className="font-mono text-tiktok-cyan">{urlQ}</span>
+          </span>
+          <Link to="/vendeuse/commandes" className="text-tiktok-pink underline-offset-2 hover:underline">
+            Tout afficher
+          </Link>
+        </p>
+      )}
 
       {error && (
         <p className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
@@ -114,6 +162,12 @@ const VendeuseCommandesPage = () => {
       )}
 
       {isPending && <p className="text-sm text-neutral-500">Chargement…</p>}
+
+      {patchStep.isError && (
+        <p className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
+          {apiErrorMessage(patchStep.error, 'Changement d’étape refusé par le serveur.')}
+        </p>
+      )}
 
       <form
         onSubmit={handleFilterSubmit}
@@ -196,7 +250,12 @@ const VendeuseCommandesPage = () => {
             </span>
             <button
               type="button"
-              disabled={selectedIds.length === 0 || bulkStep.isPending}
+              disabled={selectedIds.length === 0 || bulkStep.isPending || bulkBlockShipment}
+              title={
+                bulkBlockShipment
+                  ? 'Sélection : au moins une commande sans paiement intégral'
+                  : undefined
+              }
               onClick={() => bulkStep.mutate({ ids: selectedIds, step: 'emballage' })}
               className="rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-neutral-300 hover:bg-white/5 hover:text-white disabled:opacity-40"
             >
@@ -204,7 +263,12 @@ const VendeuseCommandesPage = () => {
             </button>
             <button
               type="button"
-              disabled={selectedIds.length === 0 || bulkStep.isPending}
+              disabled={selectedIds.length === 0 || bulkStep.isPending || bulkBlockShipment}
+              title={
+                bulkBlockShipment
+                  ? 'Sélection : au moins une commande sans paiement intégral'
+                  : undefined
+              }
               onClick={() => bulkStep.mutate({ ids: selectedIds, step: 'expediee' })}
               className="rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-neutral-300 hover:bg-white/5 hover:text-white disabled:opacity-40"
             >
@@ -235,14 +299,36 @@ const VendeuseCommandesPage = () => {
                 </div>
                 <div className="text-right">
                   <p className="text-xl font-bold text-tiktok-pink">{formatPrice(o.totalFcfa)}</p>
-                  <p className="text-xs text-neutral-500">
-                    {o.paidAt
-                      ? `Payé le ${new Date(o.paidAt).toLocaleString('fr-FR', {
-                          dateStyle: 'short',
-                          timeStyle: 'short',
-                        })}`
-                      : 'Paiement non enregistré (acompte / Wave à confirmer)'}
-                  </p>
+                  <div className="mt-1 space-y-1">
+                    {o.paymentStatus === 'full' && (
+                      <span className="inline-block rounded-full bg-status-green/20 px-2 py-0.5 text-[10px] font-bold uppercase text-status-green">
+                        Total encaissé
+                      </span>
+                    )}
+                    {o.paymentStatus === 'partial' && (
+                      <span className="inline-block rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-200">
+                        Paiement partiel
+                      </span>
+                    )}
+                    {o.paymentStatus === 'unpaid' && (
+                      <span className="inline-block rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase text-neutral-500">
+                        Aucun paiement confirmé
+                      </span>
+                    )}
+                    <p className="text-xs text-neutral-400">
+                      Encaissé :{' '}
+                      <span className="font-semibold text-white">{formatPrice(o.paidFcfaConfirmed)}</span>
+                      {' — '}Reste :{' '}
+                      <span className="font-semibold text-tiktok-pink">{formatPrice(o.balanceDueFcfa)}</span>
+                    </p>
+                    <p className="text-[11px] text-neutral-600">
+                      {o.paymentStatus !== 'full'
+                        ? 'Emballage / expédition bloqués sans solde complet.'
+                        : o.paidAt
+                          ? `Solde atteint le ${new Date(o.paidAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}`
+                          : 'Solde complet — logistique débloquée.'}
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -311,7 +397,7 @@ const VendeuseCommandesPage = () => {
                     onChange={(e) => setStep(o.id, e.target.value as OrderStep)}
                     className="rounded-lg border border-white/15 bg-[#0a0a0a] px-3 py-2 text-sm text-white focus:border-tiktok-pink/50 focus:outline-none"
                   >
-                    {steps.map((s) => (
+                    {selectableStepsFor(o).map((s) => (
                       <option key={s} value={s}>
                         {stepLabel[s]}
                       </option>
@@ -321,7 +407,12 @@ const VendeuseCommandesPage = () => {
                 <button
                   type="button"
                   onClick={() => advance(o.id, step)}
-                  disabled={step === 'livree' || patchStep.isPending}
+                  disabled={!canAdvanceOrder(o) || patchStep.isPending}
+                  title={
+                    !canAdvanceOrder(o)
+                      ? 'Paiement intégral requis avant emballage / expédition'
+                      : undefined
+                  }
                   className="rounded-lg bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Étape suivante
@@ -362,6 +453,16 @@ const VendeuseCommandesPage = () => {
               <div className="flex justify-between">
                 <span className="text-neutral-500">Total</span>
                 <span className="font-semibold text-white">{formatPrice(drawerOrder.totalFcfa)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-neutral-500">Encaissé (confirmé)</span>
+                <span className="font-semibold text-tiktok-cyan">
+                  {formatPrice(drawerOrder.paidFcfaConfirmed)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-neutral-500">Reste dû</span>
+                <span className="font-semibold text-tiktok-pink">{formatPrice(drawerOrder.balanceDueFcfa)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-neutral-500">Étape</span>

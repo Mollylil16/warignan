@@ -42,13 +42,45 @@ const listQuerySchema = z.object({
   status: z.enum(['pending', 'confirmed', 'failed']).optional(),
   fromISO: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   toISO: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  limit: z.coerce.number().int().min(1).max(500).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
 });
+
+/** Cumul des montants confirmés par (référence, flow), ordre chronologique, indexé par id d’événement. */
+function buildConfirmedCumulativeByEventId(
+  rows: { id: string; reference: string; flow: string; status: string; amountFcfa: number; createdAt: Date }[]
+): Map<string, number> {
+  const sorted = [...rows].sort((a, b) => {
+    const ka = `${a.reference}\0${a.flow}`;
+    const kb = `${b.reference}\0${b.flow}`;
+    if (ka !== kb) return ka < kb ? -1 : ka > kb ? 1 : 0;
+    const t = a.createdAt.getTime() - b.createdAt.getTime();
+    if (t !== 0) return t < 0 ? -1 : 1;
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  });
+  const out = new Map<string, number>();
+  let key = '';
+  let run = 0;
+  for (const row of sorted) {
+    const nk = `${row.reference}\0${row.flow}`;
+    if (nk !== key) {
+      key = nk;
+      run = 0;
+    }
+    if (row.status === 'confirmed') {
+      run += row.amountFcfa;
+    }
+    out.set(row.id, run);
+  }
+  return out;
+}
 
 router.get('/', requireAuth, requireRoles('vendeuse', 'admin'), async (req, res, next) => {
   try {
     const q = listQuerySchema.parse(req.query);
-    const limit = q.limit ?? 200;
+    const limit = q.limit ?? 50;
+    const page = q.page ?? 1;
+    const skip = (page - 1) * limit;
 
     const where: Record<string, unknown> = {};
     if (q.flow) where.flow = q.flow;
@@ -70,13 +102,26 @@ router.get('/', requireAuth, requireRoles('vendeuse', 'admin'), async (req, res,
       };
     }
 
-    const events = await prisma.paymentEvent.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-    });
+    const [total, events] = await Promise.all([
+      prisma.paymentEvent.count({ where }),
+      prisma.paymentEvent.findMany({
+        where,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        skip,
+        take: limit,
+      }),
+    ]);
 
     const refs = Array.from(new Set(events.map((e: { reference: string }) => e.reference)));
+    const relatedForCumul =
+      refs.length === 0
+        ? []
+        : await prisma.paymentEvent.findMany({
+            where: { reference: { in: refs } },
+            select: { id: true, reference: true, flow: true, status: true, amountFcfa: true, createdAt: true },
+          });
+    const cumById = buildConfirmedCumulativeByEventId(relatedForCumul);
+
     const [orders, reservations] = await Promise.all([
       prisma.order.findMany({
         where: { reference: { in: refs } },
@@ -84,23 +129,52 @@ router.get('/', requireAuth, requireRoles('vendeuse', 'admin'), async (req, res,
       }),
       prisma.reservation.findMany({
         where: { reference: { in: refs } },
-        select: { reference: true, id: true, totalFcfa: true, clientName: true, clientPhone: true },
+        select: {
+          reference: true,
+          id: true,
+          totalFcfa: true,
+          depositFcfa: true,
+          clientName: true,
+          clientPhone: true,
+        },
       }),
     ]);
     const orderByRef = new Map<
       string,
       { reference: string; id: string; totalFcfa: number; clientName: string; city: string }
     >(orders.map((o) => [o.reference, o]));
-    const resByRef = new Map<
-      string,
-      { reference: string; id: string; totalFcfa: number; clientName: string; clientPhone: string }
-    >(reservations.map((r) => [r.reference, r]));
+    const resByRef = new Map(
+      reservations.map((r) => [
+        r.reference,
+        {
+          reference: r.reference,
+          id: r.id,
+          totalFcfa: r.totalFcfa,
+          depositFcfa: r.depositFcfa,
+          clientName: r.clientName,
+          clientPhone: r.clientPhone,
+        },
+      ])
+    );
 
     res.json({
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
       data: events.map((e) => {
         const order = orderByRef.get(e.reference) ?? null;
         const reservation = resByRef.get(e.reference) ?? null;
         const match = Boolean(order || reservation);
+        const confirmedCumulativeFcfa = cumById.get(e.id) ?? 0;
+        const expectedFcfa =
+          order && e.flow === 'order'
+            ? order.totalFcfa
+            : reservation && e.flow === 'reservation'
+              ? reservation.depositFcfa
+              : null;
+        const balanceAfterFcfa =
+          expectedFcfa != null ? Math.max(0, expectedFcfa - confirmedCumulativeFcfa) : null;
         return {
           id: e.id,
           reference: e.reference,
@@ -110,6 +184,9 @@ router.get('/', requireAuth, requireRoles('vendeuse', 'admin'), async (req, res,
           amountFcfa: e.amountFcfa,
           createdAt: e.createdAt.toISOString(),
           match,
+          confirmedCumulativeFcfa,
+          expectedFcfa,
+          balanceAfterFcfa,
           target:
             order
               ? {
@@ -128,6 +205,7 @@ router.get('/', requireAuth, requireRoles('vendeuse', 'admin'), async (req, res,
                     clientName: reservation.clientName,
                     clientPhone: reservation.clientPhone,
                     totalFcfa: reservation.totalFcfa,
+                    depositFcfa: reservation.depositFcfa,
                   }
                 : null,
         };

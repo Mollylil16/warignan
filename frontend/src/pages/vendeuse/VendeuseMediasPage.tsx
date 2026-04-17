@@ -3,36 +3,36 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FolderOpen, ImagePlus, Trash2 } from 'lucide-react';
 import PageHeader from '../../components/vendeuse/PageHeader';
 import type { MediaGallerySlot } from '../../types/domain';
+import { STAFF_LIST_LIMIT } from '../../constants/apiPagination';
 import { api } from '../../services/api';
 import { absoluteMediaUrl } from '../../utils/mediaUrl';
 
-const GALLERY_ORDER: MediaGallerySlot[] = ['robes', 'crops', 'live', 'banners', 'uncategorized'];
+/** Galeries affichées : robes & crop tops uniquement (+ autres si anciennes données live/banners). */
+type ShopMediaSection = 'robes' | 'crops' | 'uncategorized';
 
-const GALLERY_META: Record<
-  MediaGallerySlot,
-  { title: string; hint: string }
-> = {
+const GALLERY_ORDER: ShopMediaSection[] = ['robes', 'crops', 'uncategorized'];
+
+const IMPORT_SLOTS: ShopMediaSection[] = ['robes', 'crops', 'uncategorized'];
+
+const GALLERY_META: Record<ShopMediaSection, { title: string; hint: string }> = {
   robes: {
-    title: 'Robes & pièces longues',
-    hint: 'Visuels catalogue.',
+    title: 'Robes',
+    hint: 'Visuels robes du catalogue.',
   },
   crops: {
-    title: 'Crops & chaussures',
-    hint: 'Visuels catalogue.',
-  },
-  live: {
-    title: 'Live & reels',
-    hint: 'Captures verticales.',
-  },
-  banners: {
-    title: 'Bannières & mise en avant',
-    hint: 'Home & campagnes.',
+    title: 'Crop tops',
+    hint: 'Visuels crop tops.',
   },
   uncategorized: {
-    title: 'Non classé',
-    hint: 'À classer.',
+    title: 'Autres / non classé',
+    hint: 'Anciennes catégories ou fichiers à reclasser.',
   },
 };
+
+function slotForDisplay(gallery: string): ShopMediaSection {
+  if (gallery === 'robes' || gallery === 'crops') return gallery;
+  return 'uncategorized';
+}
 
 type MediaRow = {
   id: string;
@@ -45,13 +45,13 @@ type MediaRow = {
 
 const VendeuseMediasPage = () => {
   const qc = useQueryClient();
-  const [defaultSlot, setDefaultSlot] = useState<MediaGallerySlot>('robes');
+  const [defaultSlot, setDefaultSlot] = useState<ShopMediaSection>('robes');
 
   const listQ = useQuery({
     queryKey: ['media'],
     queryFn: async () => {
       const { data } = await api.get<{ data: MediaRow[] }>('/media', {
-        params: { page: 1, limit: 200 },
+        params: { page: 1, limit: STAFF_LIST_LIMIT },
       });
       return data.data;
     },
@@ -61,7 +61,7 @@ const VendeuseMediasPage = () => {
     mutationFn: async (file: File) => {
       const fd = new FormData();
       fd.append('file', file);
-      fd.append('gallery', defaultSlot);
+      fd.append('gallery', defaultSlot as MediaGallerySlot);
       fd.append('isPrimary', 'false');
       await api.post('/media', fd);
     },
@@ -83,12 +83,10 @@ const VendeuseMediasPage = () => {
   };
 
   const items = listQ.data ?? [];
-  const byGallery = new Map<MediaGallerySlot, MediaRow[]>();
+  const byGallery = new Map<ShopMediaSection, MediaRow[]>();
   for (const g of GALLERY_ORDER) byGallery.set(g, []);
   for (const m of items) {
-    const g = (GALLERY_ORDER.includes(m.gallery as MediaGallerySlot)
-      ? m.gallery
-      : 'uncategorized') as MediaGallerySlot;
+    const g = slotForDisplay(m.gallery);
     const list = byGallery.get(g) ?? [];
     list.push(m);
     byGallery.set(g, list);
@@ -112,10 +110,10 @@ const VendeuseMediasPage = () => {
           </label>
           <select
             value={defaultSlot}
-            onChange={(e) => setDefaultSlot(e.target.value as MediaGallerySlot)}
+            onChange={(e) => setDefaultSlot(e.target.value as ShopMediaSection)}
             className="rounded-lg border border-white/15 bg-[#0a0a0a] px-3 py-2 text-sm text-white focus:border-tiktok-pink/50 focus:outline-none"
           >
-            {GALLERY_ORDER.map((g) => (
+            {IMPORT_SLOTS.map((g) => (
               <option key={g} value={g}>
                 {GALLERY_META[g].title}
               </option>

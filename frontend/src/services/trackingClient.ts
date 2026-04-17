@@ -1,5 +1,10 @@
 import type { OrderStep, ReservationWorkflow, DepositStatus } from '../types/domain';
-import type { ApiPaymentEventRow, ClientTrackingResult } from '../types/tracking';
+import type {
+  ApiPaymentEventRow,
+  ClientTrackingResult,
+  TrackingOrder,
+  TrackingReservation,
+} from '../types/tracking';
 import { fetchTracking } from './trackingApi';
 
 function normalizeRef(s: string) {
@@ -34,6 +39,18 @@ export async function resolveTrackingFromApi(rawRef: string): Promise<ClientTrac
         promoCode: (d.promoCode as string | null | undefined) ?? null,
         totalFcfa: Number(d.totalFcfa ?? 0),
         paidAt: (d.paidAt as string | null | undefined) ?? null,
+        paidFcfaConfirmed: Number(d.paidFcfaConfirmed ?? 0),
+        balanceDueFcfa: Number(
+          d.balanceDueFcfa ??
+            Math.max(0, Number(d.totalFcfa ?? 0) - Number(d.paidFcfaConfirmed ?? 0))
+        ),
+        paymentStatus:
+          (d.paymentStatus as TrackingOrder['paymentStatus']) ??
+          (Number(d.paidFcfaConfirmed ?? 0) >= Number(d.totalFcfa ?? 0)
+            ? 'full'
+            : Number(d.paidFcfaConfirmed ?? 0) > 0
+              ? 'partial'
+              : 'unpaid'),
         step: (d.step as OrderStep) ?? 'preparation',
       },
     };
@@ -57,6 +74,18 @@ export async function resolveTrackingFromApi(rawRef: string): Promise<ClientTrac
         depositStatus: (d.depositStatus as DepositStatus) ?? 'pending',
         workflow: (d.workflow as ReservationWorkflow) ?? 'awaiting_deposit',
         createdAt: String(d.createdAt ?? new Date().toISOString()),
+        paidFcfaConfirmed: Number(d.paidFcfaConfirmed ?? 0),
+        depositShortfallFcfa: Number(
+          d.depositShortfallFcfa ??
+            Math.max(0, Number(d.depositFcfa ?? 0) - Number(d.paidFcfaConfirmed ?? 0))
+        ),
+        depositCoverage:
+          (d.depositCoverage as TrackingReservation['depositCoverage']) ??
+          (Number(d.paidFcfaConfirmed ?? 0) >= Number(d.depositFcfa ?? 0)
+            ? 'full'
+            : Number(d.paidFcfaConfirmed ?? 0) > 0
+              ? 'partial'
+              : 'none'),
       },
     };
   }

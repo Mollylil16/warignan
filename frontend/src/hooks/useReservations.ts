@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
+import { STAFF_LIST_LIMIT } from '../constants/apiPagination';
 import { api } from '../services/api';
 import { useAuthStore } from '../store/authStore';
+
+export type DepositCoverage = 'none' | 'partial' | 'full';
 
 export type StaffReservationRow = {
   id: string;
@@ -16,6 +19,9 @@ export type StaffReservationRow = {
   depositStatus: string;
   workflow: string;
   createdAt: string;
+  paidFcfaConfirmed: number;
+  depositShortfallFcfa: number;
+  depositCoverage: DepositCoverage;
 };
 
 export function useReservationsList(params?: {
@@ -39,9 +45,22 @@ export function useReservationsList(params?: {
     ],
     queryFn: async () => {
       const { data } = await api.get<{ data: StaffReservationRow[] }>('/reservations', {
-        params: { page: 1, limit: 200, ...params },
+        params: { page: 1, limit: STAFF_LIST_LIMIT, ...params },
       });
-      return data.data;
+      return data.data.map((row) => {
+        const paid = row.paidFcfaConfirmed ?? 0;
+        const dep = row.depositFcfa;
+        const short = row.depositShortfallFcfa ?? Math.max(0, dep - paid);
+        const cov =
+          row.depositCoverage ??
+          (paid >= dep ? 'full' : paid > 0 ? 'partial' : ('none' as const));
+        return {
+          ...row,
+          paidFcfaConfirmed: paid,
+          depositShortfallFcfa: short,
+          depositCoverage: cov,
+        };
+      });
     },
     enabled: Boolean(token),
   });

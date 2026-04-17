@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 import {
   buildPaymentRedirectUrl,
+  buildWaveRedirectUrl,
   getOrangeMoneyPayBaseUrl,
   getWavePayBaseUrl,
   redirectToExternalPayment,
@@ -37,6 +38,18 @@ const PaymentProviderButtons = ({
 
   const appendReturns = typeof window !== 'undefined';
 
+  const waveCheckoutUrl = useMemo(
+    () =>
+      waveBase
+        ? buildWaveRedirectUrl(
+            waveBase,
+            { amountFcfa, reference, flow },
+            { appendReturnUrls: appendReturns }
+          )
+        : '',
+    [waveBase, amountFcfa, reference, flow, appendReturns]
+  );
+
   const payWave = () => {
     if (!waveBase) {
       window.alert(
@@ -45,7 +58,7 @@ const PaymentProviderButtons = ({
       return;
     }
     redirectToExternalPayment(
-      buildPaymentRedirectUrl(
+      buildWaveRedirectUrl(
         waveBase,
         { amountFcfa, reference, flow },
         { appendReturnUrls: appendReturns }
@@ -108,22 +121,64 @@ const PaymentProviderButtons = ({
         Orange Money.
       </p>
 
+      {waveBase && waveCheckoutUrl && (
+        <div className="rounded-xl border border-[#1dc8cd]/35 bg-[#1dc8cd]/[0.07] p-4 text-left text-sm leading-relaxed text-neutral-200">
+          <p className="mb-2">
+            Veuillez payer <span className="font-semibold text-white">Warignan Shop</span> avec Wave
+            en cliquant sur ce lien&nbsp;:
+          </p>
+          <a
+            href={waveCheckoutUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block break-all font-medium text-[#1dc8cd] underline decoration-[#1dc8cd]/50 underline-offset-2 hover:brightness-110"
+          >
+            {waveCheckoutUrl}
+          </a>
+          <p className="mt-3 text-xs text-neutral-500">
+            Ajoutez cet expéditeur à vos contacts pour rendre le lien cliquable (ex.&nbsp;WhatsApp).
+          </p>
+        </div>
+      )}
+
       <div className="grid gap-3 sm:grid-cols-2">
         <button
           type="button"
           disabled={disabled || amountFcfa <= 0}
           onClick={payWave}
-          className="rounded-xl bg-[#1dc8cd] py-4 text-sm font-bold uppercase tracking-wide text-[#003d40] shadow-lg transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label="Payer avec Wave"
+          className="flex min-h-[5.5rem] flex-col items-center justify-center gap-2 rounded-xl bg-[#1dc8cd] px-4 py-4 shadow-lg transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Payer avec Wave
+          <img
+            src="/images/wave_logo.avif"
+            alt=""
+            width={140}
+            height={40}
+            className="h-10 w-auto max-w-[min(100%,9rem)] object-contain object-center"
+            decoding="async"
+          />
+          <span className="text-[11px] font-bold uppercase tracking-wide text-[#003d40]">
+            Payer
+          </span>
         </button>
         <button
           type="button"
           disabled={disabled || amountFcfa <= 0}
           onClick={payOrange}
-          className="rounded-xl bg-[#ff7900] py-4 text-sm font-bold uppercase tracking-wide text-white shadow-lg transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label="Payer avec Orange Money"
+          className="flex min-h-[5.5rem] flex-col items-center justify-center gap-2 rounded-xl bg-white px-4 py-4 shadow-lg ring-1 ring-[#ff7900]/40 transition hover:brightness-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Payer avec Orange Money
+          <img
+            src="/images/Orange-Money-logo.png"
+            alt=""
+            width={160}
+            height={48}
+            className="h-11 w-auto max-w-[min(100%,10rem)] object-contain object-center"
+            decoding="async"
+          />
+          <span className="text-[11px] font-bold uppercase tracking-wide text-[#ff7900]">
+            Payer
+          </span>
         </button>
       </div>
       {(!waveBase || !omBase) && (

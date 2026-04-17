@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js';
+import { orderPaymentSummary, sumConfirmedPayments, reservationDepositSummary } from './paymentTotals.js';
 
 export type TrackingResponse =
   | { kind: 'order'; data: Record<string, unknown> }
@@ -18,6 +19,8 @@ export async function resolveTracking(reference: string): Promise<TrackingRespon
     where: { reference: ref },
   });
   if (order) {
+    const paid = await sumConfirmedPayments(order.reference, 'order');
+    const pay = orderPaymentSummary(order.totalFcfa, paid);
     return {
       kind: 'order',
       data: {
@@ -30,6 +33,9 @@ export async function resolveTracking(reference: string): Promise<TrackingRespon
         promoCode: order.promoCode,
         totalFcfa: order.totalFcfa,
         paidAt: order.paidAt?.toISOString() ?? null,
+        paidFcfaConfirmed: pay.paidFcfaConfirmed,
+        balanceDueFcfa: pay.balanceDueFcfa,
+        paymentStatus: pay.paymentStatus,
         step: order.step,
       },
     };
@@ -39,6 +45,8 @@ export async function resolveTracking(reference: string): Promise<TrackingRespon
     where: { reference: ref },
   });
   if (reservation) {
+    const paidRes = await sumConfirmedPayments(reservation.reference, 'reservation');
+    const dep = reservationDepositSummary(reservation.depositFcfa, paidRes);
     return {
       kind: 'reservation',
       data: {
@@ -54,6 +62,9 @@ export async function resolveTracking(reference: string): Promise<TrackingRespon
         depositStatus: reservation.depositStatus,
         workflow: reservation.workflow,
         createdAt: reservation.createdAt.toISOString(),
+        paidFcfaConfirmed: dep.paidFcfaConfirmed,
+        depositShortfallFcfa: dep.depositShortfallFcfa,
+        depositCoverage: dep.depositCoverage,
       },
     };
   }

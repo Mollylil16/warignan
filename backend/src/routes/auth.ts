@@ -16,9 +16,17 @@ const registerSchema = z.object({
 });
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  /** E-mail complet ou identifiant court seed (ex. `warignan` → `warignan@warignan.shop`). */
+  email: z.string().min(1).max(200),
   password: z.string().min(1),
 });
+
+function resolveLoginEmail(raw: string): string {
+  const t = raw.trim().toLowerCase();
+  if (!t) return t;
+  if (t.includes('@')) return t;
+  return `${t}@warignan.shop`;
+}
 
 function signToken(user: { id: string; email: string; role: string }) {
   return jwt.sign(
@@ -60,7 +68,8 @@ router.post('/register', async (req, res, next) => {
 router.post('/login', async (req, res, next) => {
   try {
     const body = loginSchema.parse(req.body);
-    const user = await prisma.user.findUnique({ where: { email: body.email } });
+    const email = resolveLoginEmail(body.email);
+    const user = await prisma.user.findUnique({ where: { email } });
     if (!user) throw new HttpError(401, 'Identifiants invalides');
     const ok = await bcrypt.compare(body.password, user.passwordHash);
     if (!ok) throw new HttpError(401, 'Identifiants invalides');

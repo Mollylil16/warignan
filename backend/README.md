@@ -13,7 +13,7 @@ Cette section est **dupliquée à la racine** dans `../README.md` pour que toute
 ### 1. Livraisons
 
 - Aujourd’hui : `GET /api/deliveries` répond **501** (non implémenté).
-- Le modèle Prisma **`Delivery`** existe et est seedé, mais **aucune vraie API** complète.
+- Le modèle Prisma **`Delivery`** existe ; la table est vide après le seed (comptes uniquement), mais **aucune API livraisons complète** pour l’instant.
 - **À faire :** liste + filtres (statut, date), `PATCH` pour `courierId` / `status`, routes protégées (**vendeuse** / **admin**, éventuellement **livreur** « mes livraisons »).
 
 ### 2. Réservations
@@ -84,12 +84,14 @@ npm run db:seed
 npm run dev
 ```
 
-- API : <http://localhost:3000>
-- Santé : <http://localhost:3000/api/health>
+- API : <http://localhost:4000> (port par défaut dans `src/config/env.ts`, aligné avec le proxy Vite du frontend)
+- Santé : <http://localhost:4000/api/health>
 
 ## Variables `.env`
 
-Voir `.env.example`. Pour le frontend en local : `CORS_ORIGIN=http://localhost:5173`.
+Voir `.env.example`. En local avec Vite sur le port 3000 : `CORS_ORIGIN=http://localhost:3000`.
+
+- **`JWT_SECRET`** : en dev, une valeur quelconque peut suffire ; **en production**, utilise une chaîne **longue et imprévisible** (par ex. 32 octets aléatoires en hex : `openssl rand -hex 32` sous Git Bash ou WSL). Ne la partage jamais et ne la commite pas.
 
 ## Endpoints principaux
 
@@ -120,7 +122,8 @@ Voir `.env.example`. Pour le frontend en local : `CORS_ORIGIN=http://localhost:5
 
 ## Frontend
 
-Dans le frontend, définir `VITE_API_BASE_URL=http://localhost:3000/api` puis remplacer progressivement les mocks par des appels `api` (Axios).
+- **`VITE_API_BASE_URL`** : en local, **laisser vide** : le frontend appelle `/api` et Vite proxy vers cette API (`vite.config.ts`).
+- **Production** : si le site est servi sur un autre domaine que l’API, définir l’URL complète au moment du build, par ex. `VITE_API_BASE_URL=https://api.tondomaine.com/api`.
 
 ## Build production
 

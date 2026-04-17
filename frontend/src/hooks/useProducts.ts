@@ -1,14 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
+import { STAFF_LIST_LIMIT } from '../constants/apiPagination';
 import { api } from '../services/api';
 import { mapApiProduct, type ApiProductRow } from '../services/mappers';
 import type { Product } from '../types';
 
 export function useProducts() {
   const q = useQuery({
-    queryKey: ['products', { page: 1, limit: 200 }],
+    queryKey: ['products', { page: 1, limit: STAFF_LIST_LIMIT }],
     queryFn: async () => {
       const { data } = await api.get<{ data: ApiProductRow[] }>('/products', {
-        params: { page: 1, limit: 200 },
+        params: { page: 1, limit: STAFF_LIST_LIMIT },
       });
       return data.data.map(mapApiProduct);
     },

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Copy } from 'lucide-react';
 import PageHeader from '../../components/vendeuse/PageHeader';
 import type { DepositStatus, ReservationWorkflow } from '../../types/domain';
@@ -35,7 +36,9 @@ function pillWorkflow(w: ReservationWorkflow) {
 
 const VendeuseReservationsPage = () => {
   const qc = useQueryClient();
-  const { data: rows = [], isPending, error, refetch } = useReservationsList();
+  const [searchParams] = useSearchParams();
+  const urlQ = searchParams.get('q')?.trim() || undefined;
+  const { data: rows = [], isPending, error, refetch } = useReservationsList({ q: urlQ });
   const [filter, setFilter] = useState<'all' | 'action' | 'deposit'>('all');
 
   const patch = useMutation({
@@ -103,6 +106,17 @@ const VendeuseReservationsPage = () => {
           </button>
         }
       />
+
+      {urlQ && (
+        <p className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-white/10 bg-[#111] px-3 py-2 text-sm text-neutral-400">
+          <span>
+            Recherche : <span className="font-mono text-tiktok-cyan">{urlQ}</span>
+          </span>
+          <Link to="/vendeuse/reservations" className="text-tiktok-pink underline-offset-2 hover:underline">
+            Tout afficher
+          </Link>
+        </p>
+      )}
 
       {error && (
         <p className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
@@ -192,6 +206,16 @@ const VendeuseReservationsPage = () => {
                           <span>Acompte</span>
                           <span className="font-semibold text-white">{formatPrice(r.depositFcfa)}</span>
                         </div>
+                        <div className="flex justify-between">
+                          <span>Encaissé (Wave / OM)</span>
+                          <span className="font-semibold text-tiktok-cyan">{formatPrice(r.paidFcfaConfirmed)}</span>
+                        </div>
+                        {r.depositCoverage !== 'full' && (
+                          <p className="col-span-2 text-[10px] text-amber-200/90">
+                            Manque {formatPrice(r.depositShortfallFcfa)} sur l’acompte — marquer « payé »
+                            n’est possible qu’avec le montant complet tracé côté paiements.
+                          </p>
+                        )}
                       </div>
 
                       <div className="mb-3 flex flex-wrap gap-2">
@@ -211,7 +235,12 @@ const VendeuseReservationsPage = () => {
                         {r.depositStatus === 'pending' && (
                           <button
                             type="button"
-                            disabled={patch.isPending}
+                            disabled={patch.isPending || r.depositCoverage !== 'full'}
+                            title={
+                              r.depositCoverage !== 'full'
+                                ? `Encaissements confirmés : ${r.paidFcfaConfirmed} / ${r.depositFcfa} FCFA`
+                                : undefined
+                            }
                             onClick={() => patch.mutate({ id: r.id, body: { depositStatus: 'paid' } })}
                             className="rounded-lg border border-tiktok-cyan/40 bg-tiktok-cyan/10 px-2.5 py-1.5 text-[11px] font-bold text-tiktok-cyan hover:bg-tiktok-cyan/20 disabled:opacity-50"
                           >

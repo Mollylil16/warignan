@@ -104,8 +104,18 @@ const FouillePage = () => {
       <main className="mx-auto max-w-lg px-4 py-20 text-center text-red-300">
         <p className="mb-2 font-semibold">Catalogue indisponible</p>
         <p className="text-sm text-neutral-500">
-          Démarre l’API backend et vérifie <span className="font-mono">VITE_API_BASE_URL</span> dans
-          le <span className="font-mono">.env</span> du frontend.
+          {import.meta.env.DEV ? (
+            <>
+              Démarre l’API backend (port aligné avec le proxy Vite, voir <span className="font-mono">vite.config.ts</span>)
+              et vérifie <span className="font-mono">VITE_API_BASE_URL</span> si tu n’utilises pas le
+              proxy <span className="font-mono">/api</span>.
+            </>
+          ) : (
+            <>
+              Vérifie que l’API est joignable et que <span className="font-mono">VITE_API_BASE_URL</span>{' '}
+              pointe vers l’URL publique du backend (build du frontend).
+            </>
+          )}
         </p>
       </main>
     );

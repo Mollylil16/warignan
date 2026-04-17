@@ -79,7 +79,7 @@ const VendeusePromotionsPage = () => {
     <div className="max-w-6xl">
       <PageHeader
         title="Réductions & promotions"
-        description="Codes promo enregistrés sur le serveur. Les clients actifs sont listés sur l’API publique /promotions/active."
+        description="Codes promo enregistrés sur le serveur. Les codes actifs s’affichent automatiquement côté boutique."
         actions={
           <div className="flex flex-wrap gap-2">
             <button
