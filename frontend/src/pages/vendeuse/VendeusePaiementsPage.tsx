@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  PlusCircle,
   RefreshCw,
   Search,
   XCircle,
@@ -39,6 +40,14 @@ const VendeusePaiementsPage = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(100);
   const [exporting, setExporting] = useState(false);
+  const [showManual, setShowManual] = useState(false);
+  const [mRef, setMRef] = useState('');
+  const [mFlow, setMFlow] = useState<'order' | 'reservation'>('order');
+  const [mAmount, setMAmount] = useState(0);
+  const [mProvider, setMProvider] = useState<'wave' | 'orange' | 'manual'>('wave');
+  const [mStatus, setMStatus] = useState<'confirmed' | 'pending' | 'failed'>('confirmed');
+  const [manualErr, setManualErr] = useState<string | null>(null);
+  const [manualBusy, setManualBusy] = useState(false);
 
   const params = useMemo(
     () => ({
@@ -125,6 +134,14 @@ const VendeusePaiementsPage = () => {
           <div className="flex flex-wrap items-center justify-end gap-2">
             <button
               type="button"
+              onClick={() => setShowManual((v) => !v)}
+              className="inline-flex items-center gap-2 rounded-lg bg-tiktok-pink px-4 py-2 text-sm font-bold text-white hover:brightness-110"
+            >
+              <PlusCircle className="h-4 w-4" strokeWidth={2} aria-hidden />
+              {showManual ? 'Fermer saisie' : 'Saisir un paiement'}
+            </button>
+            <button
+              type="button"
               disabled={exporting || total === 0}
               onClick={() => void handleExportCsv()}
               className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
@@ -144,6 +161,92 @@ const VendeusePaiementsPage = () => {
           </div>
         }
       />
+
+      {showManual && (
+        <div className="mb-6 rounded-xl border border-white/10 bg-[#111] p-4">
+          <p className="mb-3 text-sm text-neutral-300">
+            Si le paiement Wave/OM ne remonte pas automatiquement, enregistre-le ici à partir d’un screenshot.
+          </p>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setManualErr(null);
+              setManualBusy(true);
+              try {
+                await api.post('/payments', {
+                  reference: mRef.trim().toUpperCase(),
+                  flow: mFlow,
+                  amountFcfa: Number(mAmount),
+                  status: mStatus,
+                  provider: mProvider,
+                });
+                setMRef('');
+                setMAmount(0);
+                setMStatus('confirmed');
+                void refetch();
+              } catch (err) {
+                setManualErr(apiErrorMessage(err, 'Impossible d’enregistrer ce paiement.'));
+              } finally {
+                setManualBusy(false);
+              }
+            }}
+            className="grid gap-3 rounded-xl border border-white/10 bg-black/30 p-4 sm:grid-cols-2 lg:grid-cols-6"
+          >
+            <input
+              value={mRef}
+              onChange={(e) => setMRef(e.target.value)}
+              className="h-10 rounded-lg border border-white/10 bg-black px-3 text-sm text-white lg:col-span-2"
+              placeholder="Référence (WRG-CMD-… / WRG-RES-…)"
+              required
+            />
+            <select
+              value={mFlow}
+              onChange={(e) => setMFlow(e.target.value as 'order' | 'reservation')}
+              className="h-10 rounded-lg border border-white/10 bg-black px-3 text-sm text-white"
+            >
+              <option value="order">Commande</option>
+              <option value="reservation">Réservation</option>
+            </select>
+            <input
+              type="number"
+              min={0}
+              value={mAmount}
+              onChange={(e) => setMAmount(Number(e.target.value))}
+              className="h-10 rounded-lg border border-white/10 bg-black px-3 text-sm text-white"
+              placeholder="Montant (FCFA)"
+              required
+            />
+            <select
+              value={mProvider}
+              onChange={(e) => setMProvider(e.target.value as 'wave' | 'orange' | 'manual')}
+              className="h-10 rounded-lg border border-white/10 bg-black px-3 text-sm text-white"
+            >
+              <option value="wave">Wave</option>
+              <option value="orange">Orange Money</option>
+              <option value="manual">Manuel</option>
+            </select>
+            <select
+              value={mStatus}
+              onChange={(e) => setMStatus(e.target.value as 'confirmed' | 'pending' | 'failed')}
+              className="h-10 rounded-lg border border-white/10 bg-black px-3 text-sm text-white"
+            >
+              <option value="confirmed">Confirmé</option>
+              <option value="pending">Pending</option>
+              <option value="failed">Échec</option>
+            </select>
+            <div className="sm:col-span-2 lg:col-span-6">
+              {manualErr && <p className="text-xs text-red-300">{manualErr}</p>}
+              <button
+                type="submit"
+                disabled={manualBusy}
+                className="mt-2 rounded-lg bg-reserve-purple px-5 py-2 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50"
+              >
+                {manualBusy ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {error && (
         <p className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">

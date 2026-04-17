@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
-import { syncOrderPaidAtFromEvents } from './paymentTotals.js';
+import { syncOrderPaidAtFromEvents, syncReservationDepositFromEvents } from './paymentTotals.js';
 
 export async function recordPaymentEvent(data: {
   reference: string;
@@ -22,6 +22,9 @@ export async function recordPaymentEvent(data: {
   });
   if (data.status === 'confirmed' && data.flow === 'order') {
     await syncOrderPaidAtFromEvents(data.reference);
+  }
+  if (data.status === 'confirmed' && data.flow === 'reservation') {
+    await syncReservationDepositFromEvents(data.reference);
   }
   return row;
 }

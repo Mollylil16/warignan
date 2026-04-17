@@ -17,6 +17,7 @@ import VendeuseLivraisonsPage from '../pages/vendeuse/VendeuseLivraisonsPage';
 import VendeuseLivreursPage from '../pages/vendeuse/VendeuseLivreursPage';
 import VendeuseMediasPage from '../pages/vendeuse/VendeuseMediasPage';
 import VendeusePaiementsPage from '../pages/vendeuse/VendeusePaiementsPage';
+import VendeuseProduitsPage from '../pages/vendeuse/VendeuseProduitsPage';
 import VendeusePromotionsPage from '../pages/vendeuse/VendeusePromotionsPage';
 import AdminLayout from '../pages/admin/AdminLayout';
 import StatsPage from '../pages/admin/StatsPage';
@@ -40,6 +41,7 @@ const AppRouter = () => {
           }
         >
           <Route index element={<VendeuseDashboardPage />} />
+          <Route path="produits" element={<VendeuseProduitsPage />} />
           <Route path="reservations" element={<VendeuseReservationsPage />} />
           <Route path="commandes" element={<VendeuseCommandesPage />} />
           <Route path="paiements" element={<VendeusePaiementsPage />} />

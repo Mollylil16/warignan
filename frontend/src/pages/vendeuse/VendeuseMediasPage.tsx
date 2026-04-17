@@ -7,14 +7,26 @@ import { STAFF_LIST_LIMIT } from '../../constants/apiPagination';
 import { api } from '../../services/api';
 import { absoluteMediaUrl } from '../../utils/mediaUrl';
 
-/** Galeries affichées : robes & crop tops uniquement (+ autres si anciennes données live/banners). */
-type ShopMediaSection = 'robes' | 'crops' | 'uncategorized';
+/**
+ * “Images du site” = visuels NON liés à un produit.
+ * - Pour ajouter une tenue au catalogue (visible côté clientes), utiliser l’écran “Produits / Tenues”.
+ * - Ici : bannières, visuels homepage, contenu “live”, ou images à réutiliser.
+ */
+type ShopMediaSection = 'robes' | 'crops' | 'banners' | 'live' | 'uncategorized';
 
-const GALLERY_ORDER: ShopMediaSection[] = ['robes', 'crops', 'uncategorized'];
+const GALLERY_ORDER: ShopMediaSection[] = ['banners', 'live', 'robes', 'crops', 'uncategorized'];
 
-const IMPORT_SLOTS: ShopMediaSection[] = ['robes', 'crops', 'uncategorized'];
+const IMPORT_SLOTS: ShopMediaSection[] = ['banners', 'live', 'robes', 'crops', 'uncategorized'];
 
 const GALLERY_META: Record<ShopMediaSection, { title: string; hint: string }> = {
+  banners: {
+    title: 'Bannières',
+    hint: 'Visuels marketing / homepage (non liés à une tenue).',
+  },
+  live: {
+    title: 'Live',
+    hint: 'Visuels temporaires (stories, annonces, highlights).',
+  },
   robes: {
     title: 'Robes',
     hint: 'Visuels robes du catalogue.',
@@ -30,7 +42,8 @@ const GALLERY_META: Record<ShopMediaSection, { title: string; hint: string }> = 
 };
 
 function slotForDisplay(gallery: string): ShopMediaSection {
-  if (gallery === 'robes' || gallery === 'crops') return gallery;
+  if (gallery === 'robes' || gallery === 'crops' || gallery === 'banners' || gallery === 'live')
+    return gallery;
   return 'uncategorized';
 }
 
@@ -45,7 +58,7 @@ type MediaRow = {
 
 const VendeuseMediasPage = () => {
   const qc = useQueryClient();
-  const [defaultSlot, setDefaultSlot] = useState<ShopMediaSection>('robes');
+  const [defaultSlot, setDefaultSlot] = useState<ShopMediaSection>('banners');
 
   const listQ = useQuery({
     queryKey: ['media'],
@@ -96,7 +109,7 @@ const VendeuseMediasPage = () => {
     <div className="max-w-6xl">
       <PageHeader
         title="Médiathèque"
-        description="Liste, envoi et suppression connectés à l’API (fichiers sur le serveur)."
+        description="Visuels du site (bannières, live, etc.). Pour publier une tenue dans le catalogue cliente, utilise “Produits / Tenues”."
       />
 
       {listQ.error && (

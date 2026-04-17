@@ -30,6 +30,32 @@ export async function syncOrderPaidAtFromEvents(orderReference: string): Promise
   });
 }
 
+/**
+ * Met à jour le statut d’acompte & le workflow d’une réservation depuis les événements de paiement.
+ * - depositStatus: paid si acompte entièrement encaissé, sinon pending (sauf si déjà failed)
+ * - workflow: passe à awaiting_validation automatiquement dès que l’acompte est couvert
+ */
+export async function syncReservationDepositFromEvents(reservationReference: string): Promise<void> {
+  const ref = reservationReference.trim().toUpperCase();
+  const r = await prisma.reservation.findUnique({ where: { reference: ref } });
+  if (!r) return;
+
+  const paid = await sumConfirmedPayments(ref, 'reservation');
+  const fullyPaid = paid >= r.depositFcfa;
+
+  const nextDepositStatus = fullyPaid ? 'paid' : r.depositStatus === 'failed' ? 'failed' : 'pending';
+  const nextWorkflow =
+    fullyPaid && r.workflow === 'awaiting_deposit' ? 'awaiting_validation' : r.workflow;
+
+  await prisma.reservation.update({
+    where: { reference: ref },
+    data: {
+      depositStatus: nextDepositStatus,
+      workflow: nextWorkflow,
+    },
+  });
+}
+
 export type OrderPaymentSummary = {
   paidFcfaConfirmed: number;
   balanceDueFcfa: number;

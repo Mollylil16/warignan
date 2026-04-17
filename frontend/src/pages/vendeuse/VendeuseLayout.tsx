@@ -6,6 +6,7 @@ import { useVendeuseOverview } from '../../hooks/useVendeuseOverview';
 
 const links: { to: string; label: string; end?: boolean }[] = [
   { to: '/vendeuse', label: "Vue d'ensemble", end: true },
+  { to: '/vendeuse/produits', label: 'Produits / tenues' },
   { to: '/vendeuse/reservations', label: 'Réservations' },
   { to: '/vendeuse/commandes', label: 'Commandes' },
   { to: '/vendeuse/paiements', label: 'Paiements' },

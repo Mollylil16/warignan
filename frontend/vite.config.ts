@@ -12,10 +12,14 @@ export default defineConfig({
   ],
   server: {
     port: 3000,  // Le serveur de dev tourne sur http://localhost:3000
-    // proxy : /api → backend Express (même port que PORT dans backend/.env, défaut 4000)
+    // proxy : /api & /uploads → backend Express (même port que PORT dans backend/.env)
     proxy: {
       '/api': {
-        target: 'http://localhost:4000',
+        target: 'http://localhost:4001',
+        changeOrigin: true,
+      },
+      '/uploads': {
+        target: 'http://localhost:4001',
         changeOrigin: true,
       },
     },

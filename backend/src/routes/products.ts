@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import type { Prisma } from '@prisma/client';
+import crypto from 'node:crypto';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import {
@@ -25,7 +26,7 @@ const listQuerySchema = paginationQuerySchema.extend({
 });
 
 const createBodySchema = z.object({
-  code: z.string().min(1).max(32),
+  code: z.string().min(1).max(32).optional(),
   nom: z.string().min(1).max(200),
   description: z.string().max(2000).default(''),
   prix: z.number().int().positive(),
@@ -37,6 +38,11 @@ const createBodySchema = z.object({
 });
 
 const patchBodySchema = createBodySchema.partial();
+
+function genProductCode(category: 'robe' | 'crop') {
+  const prefix = category === 'robe' ? 'RB' : 'CR';
+  return `${prefix}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+}
 
 router.get('/', async (req, res, next) => {
   try {
@@ -65,10 +71,20 @@ router.post(
   async (req, res, next) => {
     try {
       const body = createBodySchema.parse(req.body);
-      const exists = await prisma.product.findUnique({ where: { code: body.code } });
-      if (exists) throw new HttpError(409, 'Code produit déjà utilisé');
+      let code = (body.code ?? '').trim().toUpperCase();
+      if (!code) {
+        code = genProductCode(body.category);
+        for (let i = 0; i < 10; i++) {
+          const clash = await prisma.product.findUnique({ where: { code } });
+          if (!clash) break;
+          code = genProductCode(body.category);
+        }
+      } else {
+        const exists = await prisma.product.findUnique({ where: { code } });
+        if (exists) throw new HttpError(409, 'Code produit déjà utilisé');
+      }
       const created = await createProduct({
-        code: body.code,
+        code,
         nom: body.nom,
         description: body.description,
         prix: body.prix,
