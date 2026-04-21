@@ -173,7 +173,13 @@ const VendeuseMediasPage = () => {
                   className="group relative overflow-hidden rounded-xl border border-white/10 bg-[#111]"
                 >
                   <div className="aspect-[3/4] w-full overflow-hidden bg-[#1a1a1a]">
-                    <img src={absoluteMediaUrl(m.url)} alt="" className="h-full w-full object-cover" />
+                    <img
+                      src={absoluteMediaUrl(m.url)}
+                      alt=""
+                      className="h-full w-full bg-black/20 object-contain"
+                      loading="lazy"
+                      decoding="async"
+                    />
                   </div>
                   <figcaption className="space-y-2 p-3">
                     <p className="truncate text-xs font-medium text-white">{m.filename}</p>

@@ -170,6 +170,7 @@ const PaiementCommandePage = () => {
           amountFcfa={totalFcfa}
           flow="order"
           reference={serverRef}
+          allowPartial
         />
       )}
 

@@ -48,6 +48,13 @@ export function useStaffProductMutations() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
   });
 
-  return { create, patch };
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/products/${id}`);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+  });
+
+  return { create, patch, remove };
 }
 

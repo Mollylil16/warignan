@@ -4,6 +4,8 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Copy, Filter, X } from 'lucide-react';
 import PageHeader from '../../components/vendeuse/PageHeader';
 import type { OrderStep } from '../../types/domain';
+import { useCouriers } from '../../hooks/useCouriers';
+import { useOrderCourierMutation } from '../../hooks/useOrderCourier';
 import { useOrdersList, type StaffOrderRow } from '../../hooks/useOrders';
 import { api, apiErrorMessage } from '../../services/api';
 import { formatPrice } from '../../utils/formatPrice';
@@ -35,6 +37,7 @@ const VendeuseCommandesPage = () => {
   const [maxTotal, setMaxTotal] = useState('');
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [drawerId, setDrawerId] = useState<string | null>(null);
+  const [courierByOrder, setCourierByOrder] = useState<Record<string, string>>({});
 
   const params = useMemo(
     () => ({
@@ -49,7 +52,27 @@ const VendeuseCommandesPage = () => {
     [q, stepFilter, city, fromISO, toISO, minTotal, maxTotal]
   );
 
-  const { data: orders = [], isPending, error, refetch } = useOrdersList(params);
+  const { data: orders = [], isPending, error, refetch, isFetching } = useOrdersList(params);
+  const { data: couriers = [] } = useCouriers();
+  const courierM = useOrderCourierMutation();
+
+  useEffect(() => {
+    if (!drawerId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDrawerId(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [drawerId]);
+
+  useEffect(() => {
+    const map: Record<string, string> = {};
+    (orders as StaffOrderRow[]).forEach((o) => {
+      map[o.id] = o.courierId ?? '';
+    });
+    setCourierByOrder(map);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders.length]);
 
   const patchStep = useMutation({
     mutationFn: async ({ id, step }: { id: string; step: OrderStep }) => {
@@ -105,6 +128,8 @@ const VendeuseCommandesPage = () => {
 
   const openDrawer = (id: string) => setDrawerId(id);
   const drawerOrder = (orders as StaffOrderRow[]).find((o) => o.id === drawerId) ?? null;
+  const courierNameFor = (id: string | null | undefined) =>
+    couriers.find((c) => c.id === id)?.displayName ?? null;
 
   const copy = async (txt: string) => {
     try {
@@ -130,6 +155,7 @@ const VendeuseCommandesPage = () => {
       },
       { replace: true }
     );
+    void refetch();
   };
 
   const handleFilterSubmit = (e: FormEvent) => {
@@ -286,6 +312,7 @@ const VendeuseCommandesPage = () => {
       <div className="space-y-6">
         {(orders as StaffOrderRow[]).map((o) => {
           const step = asStep(o.step);
+          const courierName = o.courierName ?? courierNameFor(o.courierId) ?? null;
           return (
             <article
               key={o.id}
@@ -296,6 +323,12 @@ const VendeuseCommandesPage = () => {
                   <p className="font-mono text-sm text-tiktok-cyan">{o.reference}</p>
                   <p className="text-lg font-bold text-white">{o.clientName}</p>
                   <p className="text-sm text-neutral-500">{o.city}</p>
+                  <p className="mt-1 text-xs text-neutral-400">
+                    Livreur :{' '}
+                    <span className={courierName ? 'font-semibold text-tiktok-cyan' : 'text-neutral-600'}>
+                      {courierName ?? 'non assigné'}
+                    </span>
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="text-xl font-bold text-tiktok-pink">{formatPrice(o.totalFcfa)}</p>
@@ -390,6 +423,38 @@ const VendeuseCommandesPage = () => {
 
               <div className="flex flex-wrap items-center gap-3 border-t border-white/10 pt-4">
                 <label className="flex items-center gap-2 text-sm text-neutral-400">
+                  <span>Livreur :</span>
+                  <select
+                    value={courierByOrder[o.id] ?? ''}
+                    disabled={courierM.isPending}
+                    onChange={(e) => setCourierByOrder((s) => ({ ...s, [o.id]: e.target.value }))}
+                    className="rounded-lg border border-white/15 bg-[#0a0a0a] px-3 py-2 text-sm text-white focus:border-tiktok-pink/50 focus:outline-none"
+                  >
+                    <option value="">—</option>
+                    {couriers.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.displayName}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  disabled={courierM.isPending}
+                  onClick={() => {
+                    const courierId = (courierByOrder[o.id] ?? '').trim();
+                    const selectedCourier = couriers.find((c) => c.id === courierId) ?? null;
+                    courierM.mutate({
+                      id: o.id,
+                      courierId: courierId ? courierId : null,
+                      courierName: selectedCourier?.displayName ?? null,
+                    });
+                  }}
+                  className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-neutral-300 hover:bg-white/10 disabled:opacity-50"
+                >
+                  Assigner
+                </button>
+                <label className="flex items-center gap-2 text-sm text-neutral-400">
                   <span>Étape :</span>
                   <select
                     value={step}
@@ -419,10 +484,11 @@ const VendeuseCommandesPage = () => {
                 </button>
                 <button
                   type="button"
+                  disabled={isFetching}
                   onClick={() => void refetch()}
-                  className="rounded-lg border border-white/15 px-4 py-2 text-sm text-neutral-400 hover:text-white"
+                  className="rounded-lg border border-white/15 px-4 py-2 text-sm text-neutral-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Actualiser
+                  {isFetching ? 'Actualisation…' : 'Actualiser'}
                 </button>
               </div>
             </article>
@@ -431,8 +497,17 @@ const VendeuseCommandesPage = () => {
       </div>
 
       {drawerOrder && (
-        <div className="fixed inset-0 z-[300] flex items-end justify-center bg-black/60 p-4 sm:items-center">
-          <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-[#0b0b0b] p-5 text-white shadow-2xl">
+        <div
+          role="presentation"
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-4 sm:items-center"
+          onClick={() => setDrawerId(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-xl rounded-2xl border border-white/10 bg-[#0b0b0b] p-5 text-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
                 <p className="font-mono text-sm text-tiktok-cyan">{drawerOrder.reference}</p>
@@ -472,6 +547,14 @@ const VendeuseCommandesPage = () => {
                 <span className="text-neutral-500">Créée</span>
                 <span className="font-semibold text-white">
                   {new Date(drawerOrder.createdAt).toLocaleString('fr-FR')}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-neutral-500">Livreur</span>
+                <span className="font-semibold text-white">
+                  {drawerOrder.courierName ??
+                    courierNameFor(drawerOrder.courierId) ??
+                    'non assigné'}
                 </span>
               </div>
             </div>

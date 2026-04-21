@@ -1,6 +1,6 @@
 import { type ChangeEvent, type FormEvent, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ImagePlus, Plus, Save } from 'lucide-react';
+import { ImagePlus, Plus, Save, Trash2 } from 'lucide-react';
 import PageHeader from '../../components/vendeuse/PageHeader';
 import { useStaffProductMutations, useStaffProductsList } from '../../hooks/useStaffProducts';
 import { api, apiErrorMessage } from '../../services/api';
@@ -19,8 +19,8 @@ type MediaRow = {
 
 export default function VendeuseProduitsPage() {
   const qc = useQueryClient();
-  const { data: products = [], isPending, error, refetch } = useStaffProductsList();
-  const { create, patch } = useStaffProductMutations();
+  const { data: products = [], isPending, error, refetch, isFetching } = useStaffProductsList();
+  const { create, patch, remove } = useStaffProductMutations();
 
   const [showCreate, setShowCreate] = useState(false);
   const [code, setCode] = useState('');
@@ -121,10 +121,11 @@ export default function VendeuseProduitsPage() {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
+              disabled={isFetching}
               onClick={() => void refetch()}
-              className="rounded-lg border border-white/15 px-4 py-2 text-sm text-neutral-300 hover:bg-white/5"
+              className="rounded-lg border border-white/15 px-4 py-2 text-sm text-neutral-300 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Actualiser
+              {isFetching ? 'Actualisation…' : 'Actualiser'}
             </button>
             <button
               type="button"
@@ -248,7 +249,11 @@ export default function VendeuseProduitsPage() {
                     } bg-[#111]`}
                     title={m.filename}
                   >
-                    <img src={absoluteMediaUrl(m.url)} alt="" className="aspect-[3/4] w-full object-cover" />
+                    <img
+                      src={absoluteMediaUrl(m.url)}
+                      alt=""
+                      className="aspect-[3/4] w-full bg-black/20 object-contain"
+                    />
                   </button>
                 );
               })}
@@ -312,17 +317,37 @@ export default function VendeuseProduitsPage() {
                 </td>
                 <td className="px-4 py-3 text-neutral-400">{p.status}</td>
                 <td className="px-4 py-3 text-right">
-                  <button
-                    type="button"
-                    disabled={patch.isPending}
-                    onClick={() =>
-                      patch.mutate({ id: p.id, body: { status: p.status === 'disponible' ? 'sold' : 'disponible' } })
-                    }
-                    className="text-xs text-neutral-300 hover:underline"
-                    title="Toggle rapide dispo/vendu"
-                  >
-                    Basculer dispo/vendu
-                  </button>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      disabled={patch.isPending}
+                      onClick={() =>
+                        patch.mutate({ id: p.id, body: { status: p.status === 'disponible' ? 'sold' : 'disponible' } })
+                      }
+                      className="text-xs text-neutral-300 hover:underline"
+                      title="Toggle rapide dispo/vendu"
+                    >
+                      Basculer dispo/vendu
+                    </button>
+                    <button
+                      type="button"
+                      disabled={remove.isPending}
+                      onClick={() => {
+                        if (
+                          !window.confirm(
+                            `Supprimer définitivement « ${p.nom} » (${p.code}) ? Cette action retire la tenue du catalogue.`
+                          )
+                        )
+                          return;
+                        remove.mutate(p.id);
+                      }}
+                      className="inline-flex items-center gap-1 rounded-lg border border-red-500/30 px-2 py-1 text-[11px] font-semibold text-red-300 hover:bg-red-500/10 disabled:opacity-50"
+                      title="Supprimer la tenue"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                      Supprimer
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

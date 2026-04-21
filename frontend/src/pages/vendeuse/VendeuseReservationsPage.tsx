@@ -38,7 +38,7 @@ const VendeuseReservationsPage = () => {
   const qc = useQueryClient();
   const [searchParams] = useSearchParams();
   const urlQ = searchParams.get('q')?.trim() || undefined;
-  const { data: rows = [], isPending, error, refetch } = useReservationsList({ q: urlQ });
+  const { data: rows = [], isPending, error, refetch, isFetching } = useReservationsList({ q: urlQ });
   const [filter, setFilter] = useState<'all' | 'action' | 'deposit'>('all');
 
   const patch = useMutation({
@@ -99,10 +99,11 @@ const VendeuseReservationsPage = () => {
         actions={
           <button
             type="button"
+            disabled={isFetching}
             onClick={() => void refetch()}
-            className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-white/10"
+            className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Actualiser
+            {isFetching ? 'Actualisation…' : 'Actualiser'}
           </button>
         }
       />

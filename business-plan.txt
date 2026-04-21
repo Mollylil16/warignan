@@ -1,0 +1,136 @@
+================================================================================
+BUSINESS PLAN — WARIGNAN SHOP (analyse à partir du site et du code — avril 2026)
+================================================================================
+
+1. RÉSUMÉ EXÉCUTIF
+--------------------------------------------------------------------------------
+Warignan Shop est une boutique en ligne de mode « friperie / sélection »
+positionnée comme une extension du commerce social (lives, TikTok) vers un
+site web : catalogue curaté (robes, crops), expérience « fouille », commandes
+et réservations avec acompte, promotions, suivi de commande, et espaces métier
+(vendeuse, admin, livreur). La monnaie métier est le FCFA ; les paiements
+s’appuient sur des flux Wave et Orange Money (URLs marchandes + pages
+checkout dans l’app). Le domaine public identifié dans le projet : warignan.com.
+
+
+2. PROPOSITION DE VALEUR
+--------------------------------------------------------------------------------
+- Offre : pièces triées (« pépites, pas surplus »), pas un catalogue anonyme.
+- Différenciation : ton proche du live (« LIVE EN COURS », urgence, actu),
+  ancrage culturel local (référence explicite à Koumassi / chine en ligne).
+- Promesse client : prix affichés en FCFA, panier, codes promo (pourcentage
+  ou montant fixe) validés côté serveur au checkout, suivi de commande.
+- Promesse vendeur : gestion catalogue, médias (galeries), commandes avec
+  étapes (préparation → livrée), réservations avec workflow et acompte.
+
+
+3. SEGMENTS CLIENTS
+--------------------------------------------------------------------------------
+A) Cliente finale (B2C) — achat ponctuel ou habituée des lives : parcours
+   accueil → fouille (filtres) → commande ou réservation → paiement mobile
+   money → suivi.
+B) Vendeuse / équipe commerciale — back-office léger (espace vendeuse) :
+   produits, visuels, suivi des ventes.
+C) Administration — pilotage, comptes, promotions.
+D) Livreur (à terme) — le modèle de données prévoit des livraisons ; l’API
+   livraison est encore partiellement à finaliser dans le code actuel.
+
+
+4. CATALOGUE & PRIX (D’APRÈS LE MODÈLE PRODUIT)
+--------------------------------------------------------------------------------
+- Catégories principales : robes, crops.
+- Statuts article : disponible, réservé, vendu ; stock numérique ; mise en
+  avant (featured) ; visuels multiples (JSON imageName).
+- Prix : entiers en FCFA ; remises promo stockées sur commande et réservation.
+
+
+5. CANAUX DE VENTE & ACQUISITION
+--------------------------------------------------------------------------------
+- Canal principal observé dans le copywriting : audience issue des lives /
+  réseaux (TikTok / lives shopping) redirigée vers le site.
+- Canal secondaire : SEO local / bouche-à-oreille sur la marque « Warignan ».
+- Canal opérationnel : bannière promotions actives (API publique) pour
+  campagnes ponctuelles.
+
+
+6. MODÈLE DE REVENUS
+--------------------------------------------------------------------------------
+- Revenu direct : marge sur vente de prêt-à-porter sélectionné (achat stock
+  amont / collaboration créateurs ou seconde main selon votre sourcing réel).
+- Revenu indirect possible (hors code actuel) : frais de livraison, ventes
+  privées live + drop site, partenariats influenceuses.
+- Paiements : encaissement via Wave / Orange Money ; le site calcule total
+  et remise ; traçabilité via événements de paiement en base.
+
+
+7. STRUCTURE DES COÛTS (INDICATIF)
+--------------------------------------------------------------------------------
+- Coûts variables : coût d’achat / préparation des pièces, emballage,
+  commissions opérateurs mobile money éventuelles.
+- Coûts fixes : hébergement VPS + nom de domaine, temps équipe (vendeuse,
+  admin), création de contenu (shooting / lives).
+- Coûts tech : maintenance app, sauvegardes base SQLite (à migrer vers
+  PostgreSQL si volume et équipe grandissent — déjà mentionné dans la doc
+  projet).
+
+
+8. OPÉRATIONS & LOGISTIQUE
+--------------------------------------------------------------------------------
+- Prise de commande : tunnel checkout avec ville et nom client ; étapes
+  commande modélisées jusqu’à « livrée ».
+- Réservation : acompte (montant FCFA), statuts de dépôt et workflow
+  (attente acompte → validation → annulation possible côté métier).
+- Livraisons : entité Delivery prévue (adresse, créneau, statut, livreur) ;
+  finaliser les API et l’interface livreur pour une chaîne bout-en-bout.
+- Médias : stockage fichiers côté serveur aujourd’hui ; prévoir CDN / cloud
+  si fort trafic.
+
+
+9. RISQUES & MITIGATION
+--------------------------------------------------------------------------------
+- Dépendance aux paiements mobiles : documenter les webhooks et valider les
+  signatures (travail prévu dans le backlog technique).
+- Concurrence friperie / fast fashion : renforcer la rareté (drops limités),
+  la qualité visuelle et la communauté live.
+- Risque technique : SQLite adapté au démarrage ; planifier migration BDD
+  et sauvegardes automatiques avant pic de charge.
+- Sécurité : rotation JWT, secrets webhooks, comptes forts en production.
+
+
+10. ROADMAP PRODUIT (ALIGNÉE SUR LE DÉPÔT)
+--------------------------------------------------------------------------------
+Court terme : finaliser livraisons API + écran livreur ; transitions
+réservation côté API ; webhooks signés ; sauvegardes prod.db.
+Moyen terme : pagination catalogue, perf, stockage médias cloud.
+Long terme : PostgreSQL, tests automatisés, monitoring (Sentry, etc.).
+
+
+11. INDICATEURS CLÉS (KPI) SUGGÉRÉS
+--------------------------------------------------------------------------------
+- Trafic : visiteurs uniques, taux de conversion fouille → panier → paiement.
+- Panier moyen et panier médian (FCFA).
+- Taux d’utilisation des codes promo ; remise moyenne accordée.
+- Délai moyen entre commande et statut « expédiée » / « livrée ».
+- Taux d’annulation ou d’échec d’acompte réservation.
+- Coût d’acquisition par canal (live vs organique).
+
+
+12. GOUVERNANCE & ÉQUIPE (TYPOLOGIE ROLES APP)
+--------------------------------------------------------------------------------
+Rôles applicatifs : client, vendeuse, admin, livreur. Adapter les fiches de
+poste réelles (qui valide les réservations, qui prépare, qui livre) aux
+permissions de chaque rôle.
+
+
+13. CONCLUSION
+--------------------------------------------------------------------------------
+Le site Warignan matérialise une boutique de mode sélective orientée digital
+et mobile money, cohérente avec une stratégie « live-to-web » en Afrique de
+l’Ouest. Le business plan ci-dessus découle des fonctionnalités et messages
+présents dans le code et l’interface ; les chiffres financiers (objectifs de
+CA, marges précises) restent à compléter avec vos données d’achat et de vente
+réelles.
+
+================================================================================
+FIN DU DOCUMENT
+================================================================================

@@ -67,6 +67,33 @@ enum PromotionType {
   fixed
 }
 
+enum PaymentIntentStatus {
+  pending
+  confirmed
+  failed
+  cancelled
+  expired
+}
+
+model PaymentIntent {
+  id          String              @id @default(cuid())
+  reference   String
+  flow        String
+  amountFcfa  Int
+  provider    String
+  status      PaymentIntentStatus @default(pending)
+  checkoutUrl String?
+  gateway     String?
+  externalRef String?
+  externalId  String?
+  payload     Json?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([reference])
+  @@index([externalId])
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -103,6 +130,8 @@ model Order {
   promoCode    String?
   totalFcfa    Int
   paidAt       DateTime?
+  courierId    String?
+  courierName  String?
   step         OrderStep @default(preparation)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -132,11 +161,13 @@ model PaymentEvent {
   flow       String
   amountFcfa Int
   provider   String?
+  externalId String?
   status     String
   payload    Json?
   createdAt  DateTime @default(now())
 
   @@index([reference])
+  @@unique([externalId])
 }
 
 model MediaAsset {

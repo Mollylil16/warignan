@@ -20,6 +20,8 @@ export type StaffOrderRow = {
   paidFcfaConfirmed: number;
   balanceDueFcfa: number;
   paymentStatus: OrderPaymentStatus;
+  courierId?: string | null;
+  courierName?: string | null;
   step: string;
   createdAt: string;
 };

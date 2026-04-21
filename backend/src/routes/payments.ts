@@ -4,6 +4,10 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { recordPaymentEvent } from '../services/paymentEventService.js';
+import { geniusPayCreatePayment } from '../services/geniusPay.js';
+import { HttpError } from '../middleware/errorHandler.js';
+import { sumConfirmedPayments } from '../services/paymentTotals.js';
+import { reconcileGeniusPay } from '../services/geniusPayReconcile.js';
 
 const router = Router();
 
@@ -12,7 +16,182 @@ const bodySchema = z.object({
   flow: z.enum(['order', 'reservation']),
   amountFcfa: z.number().int().nonnegative(),
   status: z.enum(['pending', 'confirmed', 'failed']),
-  provider: z.enum(['wave', 'orange', 'manual']).optional(),
+  provider: z.enum(['wave', 'orange', 'manual', 'geniuspay']).optional(),
+});
+
+const geniusPayCheckoutSchema = z.object({
+  reference: z.string().min(3),
+  flow: z.enum(['order', 'reservation']),
+  /** Montant demandé. Pour commande: peut être partiel. Pour réservation: acompte (ou partiel) */
+  amountFcfa: z.number().int().positive(),
+  customer: z
+    .object({
+      name: z.string().min(1).max(120).optional(),
+      email: z.string().email().optional(),
+      phone: z.string().min(3).max(32).optional(),
+      country: z.string().min(2).max(2).optional(),
+    })
+    .optional(),
+  successUrl: z.string().url().optional(),
+  errorUrl: z.string().url().optional(),
+});
+
+/**
+ * Initie un paiement GeniusPay (checkout hébergé). Accessible côté client.
+ * Le webhook `payment.success` confirmera ensuite automatiquement le paiement.
+ */
+router.post('/geniuspay/checkout', async (req, res, next) => {
+  try {
+    const body = geniusPayCheckoutSchema.parse(req.body);
+    const ref = body.reference.trim().toUpperCase();
+
+    if (body.flow === 'order') {
+      const order = await prisma.order.findUnique({ where: { reference: ref } });
+      if (!order) throw new HttpError(404, 'Commande introuvable');
+      const paid = await sumConfirmedPayments(ref, 'order');
+      const remaining = Math.max(0, order.totalFcfa - paid);
+      if (remaining <= 0) throw new HttpError(400, 'Commande déjà entièrement encaissée');
+      const amount = Math.min(body.amountFcfa, remaining);
+      const g = await geniusPayCreatePayment({
+        amount,
+        description: `Commande ${ref}`,
+        customer: body.customer,
+        metadata: { warignan_reference: ref, flow: 'order' },
+        success_url: body.successUrl,
+        error_url: body.errorUrl,
+      });
+      await prisma.paymentIntent.create({
+        data: {
+          reference: ref,
+          flow: 'order',
+          amountFcfa: amount,
+          provider: 'geniuspay',
+          status: 'pending',
+          checkoutUrl: g.checkout_url ?? g.payment_url ?? null,
+          gateway: g.gateway ?? null,
+          externalRef: g.reference ?? null,
+          payload: JSON.parse(JSON.stringify(g)) as Prisma.InputJsonValue,
+        },
+      });
+      await recordPaymentEvent({
+        reference: ref,
+        flow: 'order',
+        amountFcfa: amount,
+        status: 'pending',
+        provider: 'geniuspay',
+        payload: JSON.parse(JSON.stringify({ kind: 'geniuspay.checkout', ...g })) as Prisma.InputJsonValue,
+      });
+      return res.status(201).json({ checkoutUrl: g.checkout_url ?? g.payment_url, provider: g.gateway ?? 'geniuspay' });
+    }
+
+    const r = await prisma.reservation.findUnique({ where: { reference: ref } });
+    if (!r) throw new HttpError(404, 'Réservation introuvable');
+    const paid = await sumConfirmedPayments(ref, 'reservation');
+    const remaining = Math.max(0, r.depositFcfa - paid);
+    if (remaining <= 0) throw new HttpError(400, 'Acompte déjà entièrement encaissé');
+    const amount = Math.min(body.amountFcfa, remaining);
+    const g = await geniusPayCreatePayment({
+      amount,
+      description: `Acompte ${ref}`,
+      customer: body.customer,
+      metadata: { warignan_reference: ref, flow: 'reservation' },
+      success_url: body.successUrl,
+      error_url: body.errorUrl,
+    });
+    await prisma.paymentIntent.create({
+      data: {
+        reference: ref,
+        flow: 'reservation',
+        amountFcfa: amount,
+        provider: 'geniuspay',
+        status: 'pending',
+        checkoutUrl: g.checkout_url ?? g.payment_url ?? null,
+        gateway: g.gateway ?? null,
+        externalRef: g.reference ?? null,
+        payload: JSON.parse(JSON.stringify(g)) as Prisma.InputJsonValue,
+      },
+    });
+    await recordPaymentEvent({
+      reference: ref,
+      flow: 'reservation',
+      amountFcfa: amount,
+      status: 'pending',
+      provider: 'geniuspay',
+      payload: JSON.parse(JSON.stringify({ kind: 'geniuspay.checkout', ...g })) as Prisma.InputJsonValue,
+    });
+    return res.status(201).json({ checkoutUrl: g.checkout_url ?? g.payment_url, provider: g.gateway ?? 'geniuspay' });
+  } catch (e) {
+    next(e);
+  }
+});
+
+const summaryQuerySchema = z.object({
+  reference: z.string().min(3),
+  flow: z.enum(['order', 'reservation']),
+});
+
+/**
+ * Résumé paiement côté client : déjà encaissé (confirmé) + reste à payer.
+ * Sert au “paiement smart” (payer le reste / montant personnalisé).
+ */
+router.get('/summary', async (req, res, next) => {
+  try {
+    const q = summaryQuerySchema.parse(req.query);
+    const ref = q.reference.trim().toUpperCase();
+    if (q.flow === 'order') {
+      const order = await prisma.order.findUnique({
+        where: { reference: ref },
+        select: { reference: true, totalFcfa: true, clientName: true, city: true },
+      });
+      if (!order) throw new HttpError(404, 'Commande introuvable');
+      const paid = await sumConfirmedPayments(ref, 'order');
+      const remaining = Math.max(0, order.totalFcfa - paid);
+      return res.json({
+        reference: order.reference,
+        flow: 'order',
+        expectedFcfa: order.totalFcfa,
+        paidConfirmedFcfa: paid,
+        remainingFcfa: remaining,
+        target: { kind: 'order' as const, clientName: order.clientName, city: order.city },
+      });
+    }
+    const r = await prisma.reservation.findUnique({
+      where: { reference: ref },
+      select: { reference: true, depositFcfa: true, clientName: true, clientPhone: true },
+    });
+    if (!r) throw new HttpError(404, 'Réservation introuvable');
+    const paid = await sumConfirmedPayments(ref, 'reservation');
+    const remaining = Math.max(0, r.depositFcfa - paid);
+    return res.json({
+      reference: r.reference,
+      flow: 'reservation',
+      expectedFcfa: r.depositFcfa,
+      paidConfirmedFcfa: paid,
+      remainingFcfa: remaining,
+      target: { kind: 'reservation' as const, clientName: r.clientName, clientPhone: r.clientPhone },
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+const reconcileBodySchema = z.object({
+  /** Nombre de jours en arrière (UTC) à réconcilier. */
+  days: z.coerce.number().int().min(1).max(30).default(3),
+});
+
+/**
+ * Réconciliation GeniusPay (manuel, sécurisé).
+ * Rapporte les paiements GeniusPay récents et crée des PaymentEvent confirmés/failed si manquants.
+ */
+router.post('/geniuspay/reconcile', requireAuth, requireRoles('vendeuse', 'admin'), async (req, res, next) => {
+  try {
+    const body = reconcileBodySchema.parse(req.body ?? {});
+    const result = await reconcileGeniusPay(body.days);
+    res.json(result);
+  } catch (e) {
+    next(e);
+  }
 });
 
 /**
@@ -38,7 +217,7 @@ router.post('/', requireAuth, requireRoles('vendeuse', 'admin'), async (req, res
 const listQuerySchema = z.object({
   q: z.string().trim().min(1).max(120).optional(),
   flow: z.enum(['order', 'reservation']).optional(),
-  provider: z.enum(['wave', 'orange', 'manual']).optional(),
+  provider: z.enum(['wave', 'orange', 'manual', 'geniuspay']).optional(),
   status: z.enum(['pending', 'confirmed', 'failed']).optional(),
   fromISO: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   toISO: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),

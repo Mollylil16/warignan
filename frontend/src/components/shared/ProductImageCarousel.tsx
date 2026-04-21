@@ -74,7 +74,7 @@ const ProductImageCarousel = ({
             <img
               src={src}
               alt={`${alt} — ${i + 1}`}
-              className="h-full w-full select-none object-cover object-center"
+              className="h-full w-full select-none bg-black/20 object-contain object-center"
               style={imgFilter ? { filter: imgFilter } : undefined}
               draggable={false}
               loading="lazy"

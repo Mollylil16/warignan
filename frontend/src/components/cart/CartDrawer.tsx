@@ -38,7 +38,7 @@ const LineRow = ({
           <img
             src={line.imageUrl}
             alt=""
-            className="h-full w-full object-cover object-center"
+            className="h-full w-full bg-black/20 object-contain object-center"
           />
         ) : (
           <div className="flex h-full items-center justify-center text-[10px] text-neutral-600">

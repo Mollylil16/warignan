@@ -148,7 +148,9 @@ const VendeuseDashboardPage = () => {
         ))}
       </div>
 
-      <h2 className="mb-4 text-lg font-bold text-white">À faire maintenant</h2>
+      <h2 id="vendeuse-todo" className="mb-4 scroll-mt-24 text-lg font-bold text-white">
+        À faire maintenant
+      </h2>
       <div className="overflow-hidden rounded-xl border border-white/10 bg-[#0c0c0c]">
         {overviewLoading && !overview && !overviewError ? (
           <p className="p-5 text-sm text-neutral-500">Chargement de la file…</p>

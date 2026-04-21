@@ -44,7 +44,7 @@ const VendeusePaiementsPage = () => {
   const [mRef, setMRef] = useState('');
   const [mFlow, setMFlow] = useState<'order' | 'reservation'>('order');
   const [mAmount, setMAmount] = useState(0);
-  const [mProvider, setMProvider] = useState<'wave' | 'orange' | 'manual'>('wave');
+  const [mProvider, setMProvider] = useState<'wave' | 'orange' | 'manual' | 'geniuspay'>('wave');
   const [mStatus, setMStatus] = useState<'confirmed' | 'pending' | 'failed'>('confirmed');
   const [manualErr, setManualErr] = useState<string | null>(null);
   const [manualBusy, setManualBusy] = useState(false);
@@ -79,6 +79,10 @@ const VendeusePaiementsPage = () => {
   );
   const failedCount = filtered.reduce((s, r) => s + (r.status === 'failed' ? 1 : 0), 0);
   const unmatchedCount = filtered.reduce((s, r) => s + (!r.match ? 1 : 0), 0);
+  const actionableCount = filtered.reduce(
+    (s, r) => s + (!r.match || r.status === 'failed' ? 1 : 0),
+    0
+  );
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -125,6 +129,16 @@ const VendeusePaiementsPage = () => {
     }
   }, [filterParamsForApi, filterUnmatched]);
 
+  const reconcile = async () => {
+    try {
+      await api.post('/payments/geniuspay/reconcile', { days: 3 });
+      void refetch();
+      window.alert('Réconciliation GeniusPay lancée (3 jours).');
+    } catch (e) {
+      window.alert(apiErrorMessage(e, 'Réconciliation impossible.'));
+    }
+  };
+
   return (
     <div className="max-w-6xl">
       <PageHeader
@@ -149,6 +163,14 @@ const VendeusePaiementsPage = () => {
             >
               <Download className="h-4 w-4" strokeWidth={2} aria-hidden />
               {exporting ? 'Export…' : 'Exporter CSV'}
+            </button>
+            <button
+              type="button"
+              onClick={() => void reconcile()}
+              className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-white/10"
+              title="Récupère les paiements GeniusPay récents et crée les événements manquants (backup si un webhook a été perdu)."
+            >
+              Réconcilier GeniusPay
             </button>
             <button
               type="button"
@@ -218,12 +240,13 @@ const VendeusePaiementsPage = () => {
             />
             <select
               value={mProvider}
-              onChange={(e) => setMProvider(e.target.value as 'wave' | 'orange' | 'manual')}
+              onChange={(e) => setMProvider(e.target.value as 'wave' | 'orange' | 'manual' | 'geniuspay')}
               className="h-10 rounded-lg border border-white/10 bg-black px-3 text-sm text-white"
             >
               <option value="wave">Wave</option>
               <option value="orange">Orange Money</option>
               <option value="manual">Manuel</option>
+              <option value="geniuspay">GeniusPay</option>
             </select>
             <select
               value={mStatus}
@@ -259,6 +282,43 @@ const VendeusePaiementsPage = () => {
         onSubmit={handleSubmit}
         className="mb-6 rounded-xl border border-white/10 bg-[#111] p-4"
       >
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setFilterUnmatched(false)}
+              className={`rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wide transition ${
+                !filterUnmatched
+                  ? 'bg-reserve-purple text-white'
+                  : 'bg-[#0a0a0a] text-neutral-500 hover:text-neutral-300'
+              }`}
+            >
+              Tous
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterUnmatched(true)}
+              className={`rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wide transition ${
+                filterUnmatched
+                  ? 'bg-tiktok-cyan/20 text-tiktok-cyan'
+                  : 'bg-[#0a0a0a] text-neutral-500 hover:text-neutral-300'
+              }`}
+              title="Non rapprochés ou échecs"
+            >
+              À traiter
+              {actionableCount > 0 && (
+                <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-black text-white">
+                  {actionableCount}
+                </span>
+              )}
+            </button>
+          </div>
+          <div className="text-xs text-neutral-500">
+            Confirmés : <span className="font-semibold text-neutral-300">{formatPrice(confirmedSum)}</span>{' '}
+            — Échecs : <span className="font-semibold text-neutral-300">{failedCount}</span>{' '}
+            — Non rapprochés : <span className="font-semibold text-neutral-300">{unmatchedCount}</span>
+          </div>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <div className="relative lg:col-span-2">
             <Search
@@ -300,6 +360,7 @@ const VendeusePaiementsPage = () => {
             <option value="wave">Wave</option>
             <option value="orange">Orange Money</option>
             <option value="manual">Manuel</option>
+            <option value="geniuspay">GeniusPay</option>
           </select>
           <select
             value={status}
@@ -318,15 +379,6 @@ const VendeusePaiementsPage = () => {
 
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-4">
-            <label className="flex items-center gap-2 text-xs font-semibold text-neutral-400">
-              <input
-                type="checkbox"
-                checked={filterUnmatched}
-                onChange={(e) => setFilterUnmatched(e.target.checked)}
-                className="h-4 w-4 accent-tiktok-cyan"
-              />
-              Afficher seulement “à traiter”
-            </label>
             <label className="flex items-center gap-2 text-xs font-semibold text-neutral-400">
               <span className="text-neutral-500">Lignes par page</span>
               <select

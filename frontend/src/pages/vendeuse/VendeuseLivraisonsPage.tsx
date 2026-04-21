@@ -97,30 +97,32 @@ const VendeuseLivraisonsPage = () => {
         <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-500">
           Semaine en cours
         </h2>
-        <div className="grid grid-cols-7 gap-2">
-          {weekDays.map((d) => {
-            const iso = toISO(d);
-            const sel = iso === selectedISO;
-            const n = countForDay(iso);
-            return (
-              <button
-                key={iso}
-                type="button"
-                onClick={() => setSelectedISO(iso)}
-                className={`rounded-lg border px-2 py-3 text-center transition ${
-                  sel
-                    ? 'border-tiktok-pink bg-tiktok-pink/15 text-white'
-                    : 'border-white/10 bg-[#0a0a0a] text-neutral-400 hover:border-white/20'
-                }`}
-              >
-                <p className="text-[10px] uppercase text-neutral-500">
-                  {d.toLocaleDateString('fr-FR', { weekday: 'short' })}
-                </p>
-                <p className="text-lg font-bold tabular-nums">{d.getDate()}</p>
-                <p className="text-[10px] text-neutral-600">{n} colis</p>
-              </button>
-            );
-          })}
+        <div className="-mx-1 overflow-x-auto px-1 [&::-webkit-scrollbar]:hidden">
+          <div className="flex min-w-max gap-2 sm:min-w-0 sm:grid sm:grid-cols-7">
+            {weekDays.map((d) => {
+              const iso = toISO(d);
+              const sel = iso === selectedISO;
+              const n = countForDay(iso);
+              return (
+                <button
+                  key={iso}
+                  type="button"
+                  onClick={() => setSelectedISO(iso)}
+                  className={`w-[84px] rounded-lg border px-2 py-3 text-center transition sm:w-auto ${
+                    sel
+                      ? 'border-tiktok-pink bg-tiktok-pink/15 text-white'
+                      : 'border-white/10 bg-[#0a0a0a] text-neutral-400 hover:border-white/20'
+                  }`}
+                >
+                  <p className="text-[10px] uppercase text-neutral-500">
+                    {d.toLocaleDateString('fr-FR', { weekday: 'short' })}
+                  </p>
+                  <p className="text-lg font-bold tabular-nums">{d.getDate()}</p>
+                  <p className="text-[10px] text-neutral-600">{n} colis</p>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </section>
 

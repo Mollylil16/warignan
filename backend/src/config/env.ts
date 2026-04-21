@@ -12,4 +12,13 @@ export const env = {
   UPLOAD_DIR: process.env.UPLOAD_DIR ?? './uploads',
   WAVE_WEBHOOK_SECRET: process.env.WAVE_WEBHOOK_SECRET ?? '',
   ORANGE_MONEY_WEBHOOK_SECRET: process.env.ORANGE_MONEY_WEBHOOK_SECRET ?? '',
+  GENIUSPAY_WEBHOOK_SECRET: process.env.GENIUSPAY_WEBHOOK_SECRET ?? '',
+  /** Clés API Marchand GeniusPay (X-API-Key / X-API-Secret). */
+  GENIUSPAY_API_KEY: process.env.GENIUSPAY_API_KEY ?? '',
+  GENIUSPAY_API_SECRET: process.env.GENIUSPAY_API_SECRET ?? '',
+  GENIUSPAY_API_BASE_URL: process.env.GENIUSPAY_API_BASE_URL ?? 'https://pay.genius.ci/api/v1/merchant',
+  /** Cron réconciliation (backup webhooks) */
+  GENIUSPAY_RECONCILE_CRON_ENABLED: process.env.GENIUSPAY_RECONCILE_CRON_ENABLED ?? 'false',
+  GENIUSPAY_RECONCILE_CRON_INTERVAL_MINUTES: Number(process.env.GENIUSPAY_RECONCILE_CRON_INTERVAL_MINUTES) || 10,
+  GENIUSPAY_RECONCILE_CRON_DAYS: Number(process.env.GENIUSPAY_RECONCILE_CRON_DAYS) || 3,
 };

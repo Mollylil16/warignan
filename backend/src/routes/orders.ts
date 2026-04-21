@@ -15,6 +15,10 @@ import {
 const router = Router();
 
 const stepSchema = z.enum(['preparation', 'emballage', 'expediee', 'livree']);
+const courierAssignSchema = z.object({
+  courierId: z.string().min(1).nullable(),
+  courierName: z.string().min(1).max(120).nullable().optional(),
+});
 
 const checkoutSchema = z.object({
   clientName: z.string().min(1).max(120),
@@ -158,11 +162,36 @@ router.get('/', async (req, res, next) => {
           paidFcfaConfirmed: pay.paidFcfaConfirmed,
           balanceDueFcfa: pay.balanceDueFcfa,
           paymentStatus: pay.paymentStatus,
+          courierId: (o as any).courierId ?? null,
+          courierName: (o as any).courierName ?? null,
           step: o.step,
           createdAt: o.createdAt.toISOString(),
         };
       }),
       meta: listMeta(page, limit, total),
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.patch('/:id/courier', async (req, res, next) => {
+  try {
+    const body = courierAssignSchema.parse(req.body);
+    const order = await prisma.order.findUnique({ where: { id: req.params.id } });
+    if (!order) throw new HttpError(404, 'Commande introuvable');
+
+    const data: { courierId: string | null; courierName?: string | null } = {
+      courierId: body.courierId,
+    };
+    if (body.courierName !== undefined) data.courierName = body.courierName;
+    const updated = await prisma.order.update({ where: { id: order.id }, data });
+
+    res.json({
+      id: updated.id,
+      reference: updated.reference,
+      courierId: (updated as any).courierId ?? null,
+      courierName: (updated as any).courierName ?? null,
     });
   } catch (e) {
     next(e);

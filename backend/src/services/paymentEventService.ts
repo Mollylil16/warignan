@@ -8,14 +8,21 @@ export async function recordPaymentEvent(data: {
   amountFcfa: number;
   status: string;
   provider?: string | null;
+  externalId?: string | null;
   payload?: Prisma.InputJsonValue;
 }) {
+  const ext = data.externalId?.trim() ? data.externalId.trim() : null;
+  if (ext) {
+    const exists = await prisma.paymentEvent.findFirst({ where: { externalId: ext } });
+    if (exists) return exists;
+  }
   const row = await prisma.paymentEvent.create({
     data: {
       reference: data.reference.trim().toUpperCase(),
       flow: data.flow,
       amountFcfa: data.amountFcfa,
       provider: data.provider ?? null,
+      externalId: ext,
       status: data.status,
       payload: data.payload ?? undefined,
     },

@@ -1,13 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Check, Copy } from 'lucide-react';
-import {
-  buildPaymentRedirectUrl,
-  buildWaveRedirectUrl,
-  getOrangeMoneyPayBaseUrl,
-  getWavePayBaseUrl,
-  redirectToExternalPayment,
-  type PaymentFlow,
-} from '../../config/paymentLinks';
+import { Check, Copy, ExternalLink } from 'lucide-react';
+import { api, apiErrorMessage } from '../../services/api';
+import type { PaymentFlow } from '../../config/paymentLinks';
+import { formatPrice } from '../../utils/formatPrice';
 
 interface PaymentProviderButtonsProps {
   amountFcfa: number;
@@ -15,6 +10,8 @@ interface PaymentProviderButtonsProps {
   disabled?: boolean;
   /** Si fourni (ex. après checkout API), utilisé pour Wave / OM et le suivi. */
   reference?: string | null;
+  /** Autorise un paiement partiel (commande). */
+  allowPartial?: boolean;
 }
 
 function makeReference(flow: PaymentFlow): string {
@@ -28,59 +25,17 @@ const PaymentProviderButtons = ({
   flow,
   disabled,
   reference: referenceProp,
+  allowPartial,
 }: PaymentProviderButtonsProps) => {
   const fallbackRef = useMemo(() => makeReference(flow), [flow]);
   const reference = (referenceProp?.trim() ? referenceProp.trim() : fallbackRef).toUpperCase();
   const [copied, setCopied] = useState(false);
-
-  const waveBase = getWavePayBaseUrl();
-  const omBase = getOrangeMoneyPayBaseUrl();
-
-  const appendReturns = typeof window !== 'undefined';
-
-  const waveCheckoutUrl = useMemo(
-    () =>
-      waveBase
-        ? buildWaveRedirectUrl(
-            waveBase,
-            { amountFcfa, reference, flow },
-            { appendReturnUrls: appendReturns }
-          )
-        : '',
-    [waveBase, amountFcfa, reference, flow, appendReturns]
-  );
-
-  const payWave = () => {
-    if (!waveBase) {
-      window.alert(
-        'Lien Wave non configuré. Ajoute VITE_WAVE_PAY_URL dans le fichier .env du frontend (voir .env.example).'
-      );
-      return;
-    }
-    redirectToExternalPayment(
-      buildWaveRedirectUrl(
-        waveBase,
-        { amountFcfa, reference, flow },
-        { appendReturnUrls: appendReturns }
-      )
-    );
-  };
-
-  const payOrange = () => {
-    if (!omBase) {
-      window.alert(
-        'Lien Orange Money non configuré. Ajoute VITE_ORANGE_MONEY_PAY_URL dans le fichier .env du frontend (voir .env.example).'
-      );
-      return;
-    }
-    redirectToExternalPayment(
-      buildPaymentRedirectUrl(
-        omBase,
-        { amountFcfa, reference, flow },
-        { appendReturnUrls: appendReturns }
-      )
-    );
-  };
+  const [payAmount, setPayAmount] = useState(amountFcfa);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [paidConfirmed, setPaidConfirmed] = useState<number | null>(null);
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const [summaryBusy, setSummaryBusy] = useState(false);
 
   const copyRef = async () => {
     try {
@@ -89,6 +44,34 @@ const PaymentProviderButtons = ({
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
       window.prompt('Copie la référence :', reference);
+    }
+  };
+
+  const payWithGeniusPay = async () => {
+    setErr(null);
+    setBusy(true);
+    try {
+      const successUrl =
+        typeof window !== 'undefined'
+          ? `${window.location.origin}/paiement/retour?status=success&ref=${encodeURIComponent(reference)}`
+          : undefined;
+      const errorUrl =
+        typeof window !== 'undefined'
+          ? `${window.location.origin}/paiement/retour?status=error&ref=${encodeURIComponent(reference)}`
+          : undefined;
+      const { data } = await api.post<{ checkoutUrl: string }>('/payments/geniuspay/checkout', {
+        reference,
+        flow,
+        amountFcfa: Math.max(1, Math.round(payAmount)),
+        successUrl,
+        errorUrl,
+      });
+      if (!data?.checkoutUrl) throw new Error('checkoutUrl manquant');
+      window.location.href = data.checkoutUrl;
+    } catch (e) {
+      setErr(apiErrorMessage(e, 'Impossible de démarrer le paiement.'));
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -114,82 +97,116 @@ const PaymentProviderButtons = ({
           </button>
         </div>
       </div>
-      <p className="text-center text-[10px] text-neutral-600">
-        Les liens peuvent inclure des URLs de retour (
-        <span className="font-mono text-neutral-500">return_url</span> /{' '}
-        <span className="font-mono text-neutral-500">cancel_url</span>) selon ton intégration Wave /
-        Orange Money.
-      </p>
 
-      {waveBase && waveCheckoutUrl && (
-        <div className="rounded-xl border border-[#1dc8cd]/35 bg-[#1dc8cd]/[0.07] p-4 text-left text-sm leading-relaxed text-neutral-200">
-          <p className="mb-2">
-            Veuillez payer <span className="font-semibold text-white">Warignan Shop</span> avec Wave
-            en cliquant sur ce lien&nbsp;:
+      {!!referenceProp && (
+        <div className="rounded-xl border border-white/10 bg-[#111] p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+              Résumé paiement
+            </p>
+            <button
+              type="button"
+              disabled={summaryBusy}
+              onClick={async () => {
+                setErr(null);
+                setSummaryBusy(true);
+                try {
+                  const { data } = await api.get<{
+                    expectedFcfa: number;
+                    paidConfirmedFcfa: number;
+                    remainingFcfa: number;
+                  }>('/payments/summary', { params: { reference, flow } });
+                  setPaidConfirmed(data.paidConfirmedFcfa);
+                  setRemaining(data.remainingFcfa);
+                  if (!allowPartial) setPayAmount(data.remainingFcfa || amountFcfa);
+                } catch (e) {
+                  setErr(apiErrorMessage(e, 'Impossible de récupérer le résumé.'));
+                } finally {
+                  setSummaryBusy(false);
+                }
+              }}
+              className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-neutral-300 hover:bg-white/10 disabled:opacity-50"
+            >
+              {summaryBusy ? 'Chargement…' : 'Rafraîchir'}
+            </button>
+          </div>
+          <div className="mt-3 grid gap-2 text-sm text-neutral-300">
+            <div className="flex justify-between">
+              <span className="text-neutral-500">Déjà confirmé</span>
+              <span className="font-semibold text-white">
+                {paidConfirmed == null ? '—' : formatPrice(paidConfirmed)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-neutral-500">Reste à payer</span>
+              <span className="font-semibold text-tiktok-pink">
+                {remaining == null ? '—' : formatPrice(remaining)}
+              </span>
+            </div>
+          </div>
+          {remaining != null && remaining > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setPayAmount(remaining)}
+                className="rounded-lg bg-white/10 px-3 py-2 text-xs font-bold text-white hover:bg-white/15"
+              >
+                Payer le reste
+              </button>
+              {allowPartial && (
+                <button
+                  type="button"
+                  onClick={() => setPayAmount(Math.max(1, Math.min(payAmount, remaining)))}
+                  className="rounded-lg border border-white/15 px-3 py-2 text-xs font-bold text-neutral-300 hover:bg-white/5"
+                >
+                  Montant personnalisé
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {allowPartial && (
+        <div className="rounded-xl border border-white/10 bg-[#111] p-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            Paiement partiel
           </p>
-          <a
-            href={waveCheckoutUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block break-all font-medium text-[#1dc8cd] underline decoration-[#1dc8cd]/50 underline-offset-2 hover:brightness-110"
-          >
-            {waveCheckoutUrl}
-          </a>
-          <p className="mt-3 text-xs text-neutral-500">
-            Ajoutez cet expéditeur à vos contacts pour rendre le lien cliquable (ex.&nbsp;WhatsApp).
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={1}
+              value={payAmount}
+              onChange={(e) => setPayAmount(Number(e.target.value))}
+              className="h-10 flex-1 rounded-lg border border-white/10 bg-black px-3 text-sm text-white"
+              placeholder="Montant à payer maintenant"
+            />
+            <span className="text-xs text-neutral-500">FCFA</span>
+          </div>
+          <p className="mt-2 text-[10px] text-neutral-600">
+            Tu peux payer en plusieurs fois. Les paiements confirmés s’additionnent côté vendeuse.
           </p>
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <button
-          type="button"
-          disabled={disabled || amountFcfa <= 0}
-          onClick={payWave}
-          aria-label="Payer avec Wave"
-          className="flex min-h-[5.5rem] flex-col items-center justify-center gap-2 rounded-xl bg-[#1dc8cd] px-4 py-4 shadow-lg transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <img
-            src="/images/wave_logo.avif"
-            alt=""
-            width={140}
-            height={40}
-            className="h-10 w-auto max-w-[min(100%,9rem)] object-contain object-center"
-            decoding="async"
-          />
-          <span className="text-[11px] font-bold uppercase tracking-wide text-[#003d40]">
-            Payer
-          </span>
-        </button>
-        <button
-          type="button"
-          disabled={disabled || amountFcfa <= 0}
-          onClick={payOrange}
-          aria-label="Payer avec Orange Money"
-          className="flex min-h-[5.5rem] flex-col items-center justify-center gap-2 rounded-xl bg-white px-4 py-4 shadow-lg ring-1 ring-[#ff7900]/40 transition hover:brightness-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <img
-            src="/images/Orange-Money-logo.png"
-            alt=""
-            width={160}
-            height={48}
-            className="h-11 w-auto max-w-[min(100%,10rem)] object-contain object-center"
-            decoding="async"
-          />
-          <span className="text-[11px] font-bold uppercase tracking-wide text-[#ff7900]">
-            Payer
-          </span>
-        </button>
-      </div>
-      {(!waveBase || !omBase) && (
-        <p className="text-center text-xs text-amber-500/90">
-          {!waveBase && !omBase
-            ? 'Configure au moins une URL dans .env pour activer un moyen de paiement.'
-            : !waveBase
-              ? 'Wave : ajoute VITE_WAVE_PAY_URL pour activer ce bouton.'
-              : 'Orange Money : ajoute VITE_ORANGE_MONEY_PAY_URL pour activer ce bouton.'}
+      {err && (
+        <p className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-200">
+          {err}
         </p>
       )}
+
+      <button
+        type="button"
+        disabled={disabled || busy || payAmount <= 0}
+        onClick={() => void payWithGeniusPay()}
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-tiktok-pink px-4 py-4 text-sm font-bold text-white shadow-lg transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        <ExternalLink className="h-5 w-5" strokeWidth={2} aria-hidden />
+        {busy ? 'Redirection…' : 'Payer maintenant (GeniusPay)'}
+      </button>
+      <p className="text-center text-[10px] text-neutral-600">
+        GeniusPay propose Wave / Orange Money (et autres) sur une page de checkout sécurisée.
+      </p>
     </div>
   );
 };

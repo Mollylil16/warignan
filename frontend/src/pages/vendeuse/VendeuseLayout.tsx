@@ -1,5 +1,6 @@
 import { type FormEvent, useState } from 'react';
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Bell, LogOut, Search } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useVendeuseOverview } from '../../hooks/useVendeuseOverview';
@@ -18,6 +19,8 @@ const links: { to: string; label: string; end?: boolean }[] = [
 
 const VendeuseLayout = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const qc = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const { data: overview } = useVendeuseOverview();
@@ -34,9 +37,18 @@ const VendeuseLayout = () => {
     navigate(`${path}?q=${encodeURIComponent(t)}`);
   };
 
+  const goToNotifications = () => {
+    void qc.invalidateQueries({ queryKey: ['dashboard', 'vendeuse'] });
+    if (location.pathname === '/vendeuse') {
+      document.getElementById('vendeuse-todo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    void navigate('/vendeuse');
+  };
+
   return (
     <div className="flex min-h-screen bg-[#070707] text-white">
-      <aside className="flex w-56 shrink-0 flex-col border-r border-white/10 px-3 py-6 sm:w-64 sm:px-4">
+      <aside className="hidden w-56 shrink-0 flex-col border-r border-white/10 px-3 py-6 sm:flex sm:w-64 sm:px-4">
         <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-tiktok-pink">
           Warignan
         </p>
@@ -68,7 +80,25 @@ const VendeuseLayout = () => {
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b border-white/10 bg-[#070707]/90 px-4 py-3 backdrop-blur-md sm:px-6">
+        <header className="sticky top-0 z-[100] flex flex-wrap items-center gap-3 border-b border-white/10 bg-[#070707]/90 px-4 py-3 backdrop-blur-md sm:px-6">
+          <nav className="flex w-full gap-2 overflow-x-auto pb-1 sm:hidden [&::-webkit-scrollbar]:hidden">
+            {links.map(({ to, label, end }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={Boolean(end)}
+                className={({ isActive }) =>
+                  `shrink-0 rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-wide ${
+                    isActive
+                      ? 'bg-reserve-purple text-white'
+                      : 'bg-white/5 text-neutral-400'
+                  }`
+                }
+              >
+                {label}
+              </NavLink>
+            ))}
+          </nav>
           <form
             onSubmit={submitHeaderSearch}
             className="relative min-w-[200px] max-w-md flex-1"
@@ -89,15 +119,16 @@ const VendeuseLayout = () => {
             />
           </form>
           <div className="ml-auto flex items-center gap-3">
-            <Link
-              to="/vendeuse"
+            <button
+              type="button"
+              onClick={() => goToNotifications()}
               className="relative rounded-lg p-2 text-neutral-400 hover:bg-white/10 hover:text-white"
               aria-label={
                 todoCount > 0
                   ? `Tâches urgentes : ${todoCount} — ouvrir le tableau de bord`
                   : 'Tableau de bord — rien d’urgent'
               }
-              title="Tableau de bord"
+              title="Tâches & tableau de bord"
             >
               <Bell className="h-5 w-5" strokeWidth={2} />
               {todoCount > 0 && (
@@ -105,7 +136,7 @@ const VendeuseLayout = () => {
                   {todoCount > 9 ? '9+' : todoCount}
                 </span>
               )}
-            </Link>
+            </button>
             <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111] py-1 pl-1 pr-2">
               <div
                 className="flex h-8 w-8 items-center justify-center rounded-md bg-gradient-to-br from-reserve-purple to-tiktok-pink text-xs font-bold text-white"

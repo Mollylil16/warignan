@@ -111,3 +111,7 @@ export async function createProduct(data: Prisma.ProductCreateInput) {
 export async function updateProduct(id: string, data: Prisma.ProductUpdateInput) {
   return prisma.product.update({ where: { id }, data });
 }
+
+export async function deleteProduct(id: string) {
+  await prisma.product.delete({ where: { id } });
+}

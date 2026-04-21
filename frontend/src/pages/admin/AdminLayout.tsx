@@ -14,7 +14,7 @@ const AdminLayout = () => {
 
   return (
     <div className="flex min-h-screen bg-[#060606] text-white">
-      <aside className="flex w-56 shrink-0 flex-col border-r border-white/10 px-3 py-6 sm:w-64 sm:px-4">
+      <aside className="hidden w-56 shrink-0 flex-col border-r border-white/10 px-3 py-6 sm:flex sm:w-64 sm:px-4">
         <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-tiktok-cyan">
           Warignan
         </p>
@@ -58,9 +58,38 @@ const AdminLayout = () => {
         </div>
       </aside>
 
-      <main className="min-h-0 min-w-0 flex-1 overflow-auto p-4 sm:p-8">
-        <Outlet />
-      </main>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-[100] border-b border-white/10 bg-[#060606]/90 px-4 py-3 backdrop-blur-md sm:hidden">
+          <nav className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
+            {links.map(({ to, label, end, icon: Icon }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={Boolean(end)}
+                className={({ isActive }) =>
+                  `shrink-0 rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-wide inline-flex items-center gap-2 ${
+                    isActive ? 'bg-white/10 text-white' : 'bg-white/5 text-neutral-400'
+                  }`
+                }
+              >
+                <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" strokeWidth={2} aria-hidden />
+                {label}
+              </NavLink>
+            ))}
+            <button
+              type="button"
+              onClick={() => logout()}
+              className="shrink-0 rounded-full border border-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-neutral-300"
+            >
+              Déconnexion
+            </button>
+          </nav>
+        </header>
+
+        <main className="min-h-0 min-w-0 flex-1 overflow-auto p-4 sm:p-8">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 };

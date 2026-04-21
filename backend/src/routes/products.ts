@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import {
   createProduct,
+  deleteProduct,
   getProductById,
   listProducts,
   productToDto,
@@ -121,6 +122,22 @@ router.patch(
         data as Prisma.ProductUpdateInput
       );
       res.json(productToDto(updated));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.delete(
+  '/:id',
+  requireAuth,
+  requireRoles('vendeuse', 'admin'),
+  async (req, res, next) => {
+    try {
+      const existing = await getProductById(req.params.id);
+      if (!existing) throw new HttpError(404, 'Produit introuvable');
+      await deleteProduct(req.params.id);
+      res.status(204).send();
     } catch (e) {
       next(e);
     }
