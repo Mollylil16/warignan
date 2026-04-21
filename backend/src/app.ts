@@ -21,6 +21,11 @@ import webhooksRouter from './routes/webhooks.js';
 
 const app = express();
 
+// Derrière Nginx (reverse proxy), on doit faire confiance aux en-têtes X-Forwarded-*,
+// sinon express-rate-limit déclenche ERR_ERL_UNEXPECTED_X_FORWARDED_FOR.
+// `1` = un proxy de confiance (Nginx local).
+app.set('trust proxy', 1);
+
 app.use(
   helmet({
     // Les uploads/images sont servis depuis /uploads, pas besoin de CSP strict ici (à faire côté Nginx idéalement).
