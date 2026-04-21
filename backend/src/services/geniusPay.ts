@@ -61,18 +61,37 @@ export async function geniusPayCreatePayment(
     },
     body: JSON.stringify(args),
     signal: ctrl.signal,
+    // Important: if the endpoint is misconfigured, we may be redirected to the marketing site.
+    // We want to surface the redirect explicitly instead of silently following it and parsing HTML.
+    redirect: 'manual',
   });
   clearTimeout(timeout);
 
+  if (res.status >= 300 && res.status < 400) {
+    const loc = res.headers.get('location');
+    throw new HttpError(
+      502,
+      `GeniusPay: redirection HTTP ${res.status}${loc ? ` vers ${loc}` : ''} (base URL probable incorrecte)`
+    );
+  }
+
+  const contentType = res.headers.get('content-type') ?? '';
   let json: any = null;
-  try {
-    json = await res.json();
-  } catch {
-    // ignore
+  if (contentType.includes('application/json')) {
+    try {
+      json = await res.json();
+    } catch {
+      json = null;
+    }
   }
 
   if (!res.ok || !json?.success || !json?.data) {
-    const msg = json?.message || json?.error || `GeniusPay: HTTP ${res.status}`;
+    const msg =
+      json?.message ||
+      json?.error ||
+      (contentType && !contentType.includes('application/json')
+        ? `GeniusPay: HTTP ${res.status} (réponse non-JSON: ${contentType || 'content-type absent'})`
+        : `GeniusPay: HTTP ${res.status}`);
     throw new HttpError(502, typeof msg === 'string' ? msg : 'GeniusPay: erreur API');
   }
 
