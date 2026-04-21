@@ -186,10 +186,10 @@ router.get('/', async (req, res, next) => {
     if (q.depositStatus) where.depositStatus = q.depositStatus;
     if (q.q) {
       where.OR = [
-        { reference: { contains: q.q, mode: 'insensitive' } },
-        { clientName: { contains: q.q, mode: 'insensitive' } },
-        { clientPhone: { contains: q.q, mode: 'insensitive' } },
-        { productsSummary: { contains: q.q, mode: 'insensitive' } },
+        { reference: { contains: q.q } },
+        { clientName: { contains: q.q } },
+        { clientPhone: { contains: q.q } },
+        { productsSummary: { contains: q.q } },
       ];
     }
     if (q.fromISO || q.toISO) {

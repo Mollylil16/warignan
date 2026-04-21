@@ -267,9 +267,9 @@ router.get('/', requireAuth, requireRoles('vendeuse', 'admin'), async (req, res,
     if (q.status) where.status = q.status;
     if (q.q) {
       where.OR = [
-        { reference: { contains: q.q, mode: 'insensitive' } },
-        { status: { contains: q.q, mode: 'insensitive' } },
-        { provider: { contains: q.q, mode: 'insensitive' } },
+        { reference: { contains: q.q } },
+        { status: { contains: q.q } },
+        { provider: { contains: q.q } },
       ];
     }
     if (q.fromISO || q.toISO) {

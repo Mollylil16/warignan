@@ -97,13 +97,13 @@ router.get('/', async (req, res, next) => {
 
     const where: Record<string, unknown> = {};
     if (q.step) where.step = q.step;
-    if (q.city) where.city = { contains: q.city, mode: 'insensitive' };
+    if (q.city) where.city = { contains: q.city };
     if (q.q) {
       where.OR = [
-        { reference: { contains: q.q, mode: 'insensitive' } },
-        { clientName: { contains: q.q, mode: 'insensitive' } },
-        { city: { contains: q.q, mode: 'insensitive' } },
-        { itemsSummary: { contains: q.q, mode: 'insensitive' } },
+        { reference: { contains: q.q } },
+        { clientName: { contains: q.q } },
+        { city: { contains: q.q } },
+        { itemsSummary: { contains: q.q } },
       ];
     }
     if (q.minTotalFcfa != null || q.maxTotalFcfa != null) {
