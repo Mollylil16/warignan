@@ -149,15 +149,17 @@ router.post('/geniuspay', rawBodyParser, async (req, res, next) => {
     if (!Number.isFinite(ts)) throw new HttpError(400, 'Header X-Webhook-Timestamp manquant');
     if (Math.abs(nowUnix() - ts) > 300) throw new HttpError(400, 'Timestamp webhook trop ancien');
 
-    const secretTrim = env.GENIUSPAY_WEBHOOK_SECRET?.trim() ?? '';
-    if (!secretTrim) {
+    const secrets = [env.GENIUSPAY_WEBHOOK_SECRET, env.GENIUSPAY_WEBHOOK_SECRET_OLD]
+      .map((s) => (s ?? '').trim())
+      .filter(Boolean);
+    if (secrets.length === 0) {
       if (env.NODE_ENV === 'production') {
         throw new HttpError(503, 'Configurer GENIUSPAY_WEBHOOK_SECRET en production pour accepter les webhooks GeniusPay');
       }
     } else {
       const signature = req.headers['x-webhook-signature'];
       const signedPayload = `${ts}.${raw.toString('utf8')}`;
-      const ok = verifyHmacSha256Hex(secretTrim, signedPayload, signature as string | string[] | undefined);
+      const ok = secrets.some((s) => verifyHmacSha256Hex(s, signedPayload, signature as string | string[] | undefined));
       if (!ok) throw new HttpError(401, 'Signature webhook invalide');
     }
 
@@ -205,6 +207,9 @@ router.post('/geniuspay', rawBodyParser, async (req, res, next) => {
         externalId,
         payload: json as Prisma.InputJsonValue,
       });
+      console.log(
+        `[webhook][geniuspay] event=${event} ref=${ref} flow=${flow} amount=${amountFcfa} provider=${provider} status=${status}`
+      );
     }
 
     if (ref && txRef) {

@@ -13,6 +13,7 @@ export const env = {
   WAVE_WEBHOOK_SECRET: process.env.WAVE_WEBHOOK_SECRET ?? '',
   ORANGE_MONEY_WEBHOOK_SECRET: process.env.ORANGE_MONEY_WEBHOOK_SECRET ?? '',
   GENIUSPAY_WEBHOOK_SECRET: process.env.GENIUSPAY_WEBHOOK_SECRET ?? '',
+  GENIUSPAY_WEBHOOK_SECRET_OLD: process.env.GENIUSPAY_WEBHOOK_SECRET_OLD ?? '',
   /** Clés API Marchand GeniusPay (X-API-Key / X-API-Secret). */
   GENIUSPAY_API_KEY: process.env.GENIUSPAY_API_KEY ?? '',
   GENIUSPAY_API_SECRET: process.env.GENIUSPAY_API_SECRET ?? '',
@@ -22,3 +23,7 @@ export const env = {
   GENIUSPAY_RECONCILE_CRON_INTERVAL_MINUTES: Number(process.env.GENIUSPAY_RECONCILE_CRON_INTERVAL_MINUTES) || 10,
   GENIUSPAY_RECONCILE_CRON_DAYS: Number(process.env.GENIUSPAY_RECONCILE_CRON_DAYS) || 3,
 };
+
+if (env.NODE_ENV === 'production' && env.JWT_SECRET === 'dev-secret-change-in-production') {
+  throw new Error('JWT_SECRET doit être défini en production.');
+}

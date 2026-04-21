@@ -50,6 +50,8 @@ export async function geniusPayCreatePayment(
   const base = env.GENIUSPAY_API_BASE_URL.replace(/\/+$/, '');
   const url = `${base}/payments`;
 
+  const ctrl = new AbortController();
+  const timeout = setTimeout(() => ctrl.abort(), 15_000);
   const res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -58,7 +60,9 @@ export async function geniusPayCreatePayment(
       'X-API-Secret': secret,
     },
     body: JSON.stringify(args),
+    signal: ctrl.signal,
   });
+  clearTimeout(timeout);
 
   let json: any = null;
   try {
@@ -96,6 +100,8 @@ export async function geniusPayListPayments(args: {
   if (args.to) url.searchParams.set('to', args.to);
   url.searchParams.set('per_page', String(Math.min(100, Math.max(1, args.per_page ?? 50))));
 
+  const ctrl = new AbortController();
+  const timeout = setTimeout(() => ctrl.abort(), 15_000);
   const res = await fetch(url.toString(), {
     method: 'GET',
     headers: {
@@ -103,7 +109,9 @@ export async function geniusPayListPayments(args: {
       'X-API-Key': key,
       'X-API-Secret': secret,
     },
+    signal: ctrl.signal,
   });
+  clearTimeout(timeout);
 
   let json: any = null;
   try {

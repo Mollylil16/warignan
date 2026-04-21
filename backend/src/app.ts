@@ -1,8 +1,10 @@
 import path from 'node:path';
 import cors from 'cors';
 import express from 'express';
+import helmet from 'helmet';
 import { env } from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { apiLimiter, webhookLimiter } from './middleware/rateLimit.js';
 import authRouter from './routes/auth.js';
 import deliveriesRouter from './routes/deliveries.js';
 import healthRouter from './routes/health.js';
@@ -20,18 +22,26 @@ import webhooksRouter from './routes/webhooks.js';
 const app = express();
 
 app.use(
+  helmet({
+    // Les uploads/images sont servis depuis /uploads, pas besoin de CSP strict ici (à faire côté Nginx idéalement).
+    contentSecurityPolicy: false,
+  })
+);
+
+app.use(
   cors({
     origin: env.CORS_ORIGIN.split(',').map((s) => s.trim()),
     credentials: true,
   })
 );
 /** Webhooks : corps brut pour vérification HMAC (avant express.json). */
-app.use('/api/webhooks', webhooksRouter);
+app.use('/api/webhooks', webhookLimiter, webhooksRouter);
 app.use(express.json({ limit: '2mb' }));
 
 const uploadRoot = path.resolve(env.UPLOAD_DIR);
 app.use('/uploads', express.static(uploadRoot));
 
+app.use('/api', apiLimiter);
 app.use('/api/health', healthRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);

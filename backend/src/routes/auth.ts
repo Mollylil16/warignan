@@ -6,6 +6,7 @@ import { prisma } from '../lib/prisma.js';
 import { env } from '../config/env.js';
 import { requireAuth } from '../middleware/auth.js';
 import { HttpError } from '../middleware/errorHandler.js';
+import { authLimiter } from '../middleware/rateLimit.js';
 
 const router = Router();
 
@@ -36,7 +37,7 @@ function signToken(user: { id: string; email: string; role: string }) {
   );
 }
 
-router.post('/register', async (req, res, next) => {
+router.post('/register', authLimiter, async (req, res, next) => {
   try {
     const body = registerSchema.parse(req.body);
     const exists = await prisma.user.findUnique({ where: { email: body.email } });
@@ -65,7 +66,7 @@ router.post('/register', async (req, res, next) => {
   }
 });
 
-router.post('/login', async (req, res, next) => {
+router.post('/login', authLimiter, async (req, res, next) => {
   try {
     const body = loginSchema.parse(req.body);
     const email = resolveLoginEmail(body.email);

@@ -167,6 +167,7 @@ model PaymentEvent {
   createdAt  DateTime @default(now())
 
   @@index([reference])
+  @@index([reference, flow, status])
   @@unique([externalId])
 }
 
