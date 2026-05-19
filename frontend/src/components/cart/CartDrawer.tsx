@@ -27,6 +27,7 @@ const LineRow = ({
   onRemove: () => void;
   accent: 'reserve' | 'order';
 }) => {
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
   const lineTotal = line.prix * line.quantity;
   const border =
     accent === 'reserve' ? 'border-reserve-purple/40' : 'border-tiktok-pink/35';
@@ -53,35 +54,57 @@ const LineRow = ({
           {formatPrice(line.prix)} × {line.quantity}
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded border border-white/10 bg-black/40">
-            <button
-              type="button"
-              onClick={onMinus}
-              className="p-1.5 text-neutral-300 hover:bg-white/10 hover:text-white"
-              aria-label="Diminuer la quantité"
-            >
-              <Minus className="h-3.5 w-3.5" strokeWidth={2} />
-            </button>
-            <span className="min-w-[1.5rem] text-center text-sm font-bold text-white">
-              {line.quantity}
-            </span>
-            <button
-              type="button"
-              onClick={onPlus}
-              className="p-1.5 text-neutral-300 hover:bg-white/10 hover:text-white"
-              aria-label="Augmenter la quantité"
-            >
-              <Plus className="h-3.5 w-3.5" strokeWidth={2} />
-            </button>
-          </div>
-          <button
-            type="button"
-            onClick={onRemove}
-            className="flex items-center gap-1 rounded px-2 py-1 text-[11px] text-neutral-500 hover:bg-red-500/10 hover:text-red-400"
-          >
-            <Trash2 className="h-3.5 w-3.5" strokeWidth={2} />
-            Retirer
-          </button>
+          {!confirmingRemove ? (
+            <>
+              <div className="flex items-center gap-1 rounded border border-white/10 bg-black/40">
+                <button
+                  type="button"
+                  onClick={onMinus}
+                  className="p-1.5 text-neutral-300 hover:bg-white/10 hover:text-white"
+                  aria-label="Diminuer la quantité"
+                >
+                  <Minus className="h-3.5 w-3.5" strokeWidth={2} />
+                </button>
+                <span className="min-w-[1.5rem] text-center text-sm font-bold text-white">
+                  {line.quantity}
+                </span>
+                <button
+                  type="button"
+                  onClick={onPlus}
+                  className="p-1.5 text-neutral-300 hover:bg-white/10 hover:text-white"
+                  aria-label="Augmenter la quantité"
+                >
+                  <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setConfirmingRemove(true)}
+                className="flex items-center gap-1 rounded px-2 py-1 text-[11px] text-neutral-500 hover:bg-red-500/10 hover:text-red-400"
+              >
+                <Trash2 className="h-3.5 w-3.5" strokeWidth={2} />
+                Retirer
+              </button>
+            </>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-neutral-400">Retirer cet article ?</span>
+              <button
+                type="button"
+                onClick={onRemove}
+                className="rounded bg-red-500/20 px-2 py-1 text-[11px] font-semibold text-red-400 hover:bg-red-500/30"
+              >
+                Oui, retirer
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmingRemove(false)}
+                className="rounded px-2 py-1 text-[11px] text-neutral-500 hover:text-neutral-300"
+              >
+                Annuler
+              </button>
+            </div>
+          )}
         </div>
       </div>
       <div className="shrink-0 text-right">

@@ -109,6 +109,27 @@ router.delete(
   }
 );
 
+const patchRoleSchema = z.object({
+  role: z.enum(['admin', 'vendeuse', 'livreur', 'client']),
+});
+
+router.patch('/:id/role', requireAuth, requireRoles('admin'), async (req, res, next) => {
+  try {
+    const { role } = patchRoleSchema.parse(req.body);
+    const target = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!target) throw new HttpError(404, 'Utilisateur introuvable');
+    if (target.id === req.user!.sub) throw new HttpError(400, 'Impossible de modifier son propre rôle');
+    const updated = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { role },
+      select: { id: true, email: true, displayName: true, role: true },
+    });
+    res.json(updated);
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.get('/', requireAuth, requireRoles('admin'), async (_req, res, next) => {
   try {
     const rows = await prisma.user.findMany({

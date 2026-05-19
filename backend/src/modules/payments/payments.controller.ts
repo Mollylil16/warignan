@@ -1,1 +1,0 @@
-// PaymentsController — à implémenter

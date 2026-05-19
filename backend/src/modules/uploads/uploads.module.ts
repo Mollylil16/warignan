@@ -1,1 +1,0 @@
-// UploadsModule — à implémenter

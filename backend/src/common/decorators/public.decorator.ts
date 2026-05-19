@@ -1,1 +1,0 @@
-// Décorateur @Public — à implémenter

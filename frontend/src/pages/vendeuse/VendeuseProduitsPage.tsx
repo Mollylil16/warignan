@@ -1,6 +1,6 @@
 import { type ChangeEvent, type FormEvent, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ImagePlus, Plus, Save, Trash2 } from 'lucide-react';
+import { ImagePlus, Plus, Save, Trash2, Pencil } from 'lucide-react';
 import PageHeader from '../../components/vendeuse/PageHeader';
 import { useStaffProductMutations, useStaffProductsList } from '../../hooks/useStaffProducts';
 import { api, apiErrorMessage } from '../../services/api';
@@ -23,6 +23,7 @@ export default function VendeuseProduitsPage() {
   const { create, patch, remove } = useStaffProductMutations();
 
   const [showCreate, setShowCreate] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [code, setCode] = useState('');
   const [nom, setNom] = useState('');
   const [description, setDescription] = useState('');
@@ -84,32 +85,45 @@ export default function VendeuseProduitsPage() {
       setCreateErr('Ajoute au moins une image produit.');
       return;
     }
-    create.mutate(
-      {
-        ...(code.trim() ? { code: code.trim() } : {}),
-        nom: nom.trim(),
-        description: description.trim(),
-        prix,
-        category,
-        imageName: imgs,
-        stock,
-        featured,
-      },
-      {
-        onSuccess: () => {
-          setCode('');
-          setNom('');
-          setDescription('');
-          setPrix(15000);
-          setCategory('robe');
-          setStock(1);
-          setFeatured(false);
-          setSelectedUrls([]);
-          setShowCreate(false);
-        },
+    
+    const payload = {
+      ...(code.trim() ? { code: code.trim() } : {}),
+      nom: nom.trim(),
+      description: description.trim(),
+      prix,
+      category,
+      imageName: imgs,
+      stock,
+      featured,
+    };
+
+    const onSuccess = () => {
+      setEditingId(null);
+      setCode('');
+      setNom('');
+      setDescription('');
+      setPrix(15000);
+      setCategory('robe');
+      setStock(1);
+      setFeatured(false);
+      setSelectedUrls([]);
+      setShowCreate(false);
+    };
+
+    if (editingId) {
+      patch.mutate(
+        { id: editingId, body: payload },
+        {
+          onSuccess,
+          onError: (err) => setCreateErr(apiErrorMessage(err, 'Modification impossible.')),
+        }
+      );
+    } else {
+      create.mutate(payload, {
+        onSuccess,
         onError: (err) => setCreateErr(apiErrorMessage(err, 'Création impossible.')),
-      }
-    );
+      });
+    }
   };
 
   return (
@@ -129,11 +143,26 @@ export default function VendeuseProduitsPage() {
             </button>
             <button
               type="button"
-              onClick={() => setShowCreate((v) => !v)}
+              onClick={() => {
+                if (showCreate && !editingId) {
+                  setShowCreate(false);
+                } else {
+                  setEditingId(null);
+                  setCode('');
+                  setNom('');
+                  setDescription('');
+                  setPrix(15000);
+                  setCategory('robe');
+                  setStock(1);
+                  setFeatured(false);
+                  setSelectedUrls([]);
+                  setShowCreate(true);
+                }
+              }}
               className="inline-flex items-center gap-2 rounded-lg bg-tiktok-pink px-4 py-2 text-sm font-bold text-white hover:brightness-110"
             >
               <Plus className="h-4 w-4" strokeWidth={2} aria-hidden />
-              {showCreate ? 'Fermer' : 'Nouvelle tenue'}
+              {showCreate && !editingId ? 'Fermer' : 'Nouvelle tenue'}
             </button>
           </div>
         }
@@ -148,6 +177,9 @@ export default function VendeuseProduitsPage() {
 
       {showCreate && (
         <form onSubmit={submit} className="mb-8 rounded-xl border border-white/10 bg-[#111] p-5">
+          <h2 className="mb-4 text-lg font-bold text-white">
+            {editingId ? 'Modifier la tenue' : 'Créer une nouvelle tenue'}
+          </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <label className="mb-1 block text-xs font-semibold text-neutral-500">Code</label>
@@ -271,11 +303,17 @@ export default function VendeuseProduitsPage() {
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <button
               type="submit"
-              disabled={create.isPending}
+              disabled={editingId ? patch.isPending : create.isPending}
               className="inline-flex items-center gap-2 rounded-lg bg-reserve-purple px-6 py-2 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50"
             >
               <Save className="h-4 w-4" strokeWidth={2} aria-hidden />
-              {create.isPending ? 'Création…' : 'Créer et publier'}
+              {editingId
+                ? patch.isPending
+                  ? 'Modification...'
+                  : 'Enregistrer'
+                : create.isPending
+                ? 'Création…'
+                : 'Créer et publier'}
             </button>
           </div>
         </form>
@@ -328,6 +366,27 @@ export default function VendeuseProduitsPage() {
                       title="Toggle rapide dispo/vendu"
                     >
                       Basculer dispo/vendu
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingId(p.id);
+                        setCode(p.code || '');
+                        setNom(p.nom || '');
+                        setDescription(p.description || '');
+                        setPrix(p.prix || 15000);
+                        setCategory((p.category as 'robe' | 'crop') || 'robe');
+                        setStock(p.stock ?? 1);
+                        setFeatured(p.featured ?? false);
+                        setSelectedUrls(Array.isArray(p.imageName) ? p.imageName : []);
+                        setShowCreate(true);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="inline-flex items-center gap-1 rounded-lg border border-blue-500/30 px-2 py-1 text-[11px] font-semibold text-blue-300 hover:bg-blue-500/10"
+                      title="Modifier la tenue"
+                    >
+                      <Pencil className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                      Modifier
                     </button>
                     <button
                       type="button"

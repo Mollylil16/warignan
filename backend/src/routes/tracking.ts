@@ -11,6 +11,7 @@ router.get('/:reference', async (req, res, next) => {
     if (result.kind === 'not_found') {
       return res.status(404).json({ error: 'Référence introuvable', kind: 'not_found' });
     }
+    res.setHeader('Cache-Control', 'private, max-age=10');
     res.json(result);
   } catch (e) {
     next(e);

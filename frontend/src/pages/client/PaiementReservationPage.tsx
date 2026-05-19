@@ -21,6 +21,7 @@ const PaiementReservationPage = () => {
 
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [serverRef, setServerRef] = useState<string | null>(null);
   const [serverDeposit, setServerDeposit] = useState<number | null>(null);
   const [checkoutErr, setCheckoutErr] = useState<string | null>(null);
@@ -39,9 +40,24 @@ const PaiementReservationPage = () => {
     }
   };
 
+  const validatePhone = (value: string): boolean => {
+    const digits = value.replace(/[\s\-().]/g, '');
+    // Accepte +225XXXXXXXXXX (13 chars) ou 225XXXXXXXXXX (12) ou XXXXXXXXXX (10 chiffres)
+    return /^(\+225|225)?[0-9]{10}$/.test(digits);
+  };
+
+  const handlePhoneChange = (value: string) => {
+    setClientPhone(value);
+    if (phoneError && validatePhone(value)) setPhoneError(null);
+  };
+
   const handleConfirm = async (e: FormEvent) => {
     e.preventDefault();
     setCheckoutErr(null);
+    if (!validatePhone(clientPhone)) {
+      setPhoneError('Numéro invalide — format attendu : +225 07 00 00 00 00');
+      return;
+    }
     setBusy(true);
     try {
       const res = await checkoutReservation({
@@ -162,10 +178,16 @@ const PaiementReservationPage = () => {
             <input
               required
               value={clientPhone}
-              onChange={(e) => setClientPhone(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-black px-3 py-2 text-sm text-white"
-              placeholder="+225 …"
+              onChange={(e) => handlePhoneChange(e.target.value)}
+              onBlur={() => {
+                if (clientPhone && !validatePhone(clientPhone))
+                  setPhoneError('Numéro invalide — format attendu : +225 07 00 00 00 00');
+              }}
+              className={`w-full rounded-lg border px-3 py-2 text-sm text-white bg-black ${phoneError ? 'border-red-500' : 'border-white/10'}`}
+              placeholder="+225 07 00 00 00 00"
+              inputMode="tel"
             />
+            {phoneError && <p className="mt-1 text-xs text-red-400">{phoneError}</p>}
           </div>
           {checkoutErr && <p className="text-xs text-red-400">{checkoutErr}</p>}
           <button

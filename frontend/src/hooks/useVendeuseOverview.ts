@@ -47,6 +47,8 @@ export function useVendeuseOverview() {
       return data;
     },
     enabled: Boolean(token),
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
   });
 }
 

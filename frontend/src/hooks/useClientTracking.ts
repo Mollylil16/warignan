@@ -8,6 +8,7 @@ export function useClientTracking(submittedRef: string | null) {
     queryFn: (): Promise<ClientTrackingResult> => resolveTrackingFromApi(submittedRef!),
     enabled: Boolean(submittedRef?.trim()),
     retry: false,
+    refetchInterval: submittedRef?.trim() ? 30_000 : false,
   });
 
   const result: ClientTrackingResult | null =

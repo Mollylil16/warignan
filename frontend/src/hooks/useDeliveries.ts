@@ -7,6 +7,7 @@ export type DeliveryRow = {
   id: string;
   orderRef: string;
   clientName: string;
+  clientPhone: string | null;
   address: string;
   dateISO: string;
   windowLabel: string;
@@ -27,5 +28,7 @@ export function useDeliveriesList(params?: { status?: string; dateISO?: string }
       return data.data;
     },
     enabled: Boolean(token),
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
   });
 }

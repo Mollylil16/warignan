@@ -1,14 +1,16 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Copy, Filter, X } from 'lucide-react';
+import { Copy, Download, Filter, X } from 'lucide-react';
 import PageHeader from '../../components/vendeuse/PageHeader';
 import type { OrderStep } from '../../types/domain';
 import { useCouriers } from '../../hooks/useCouriers';
 import { useOrderCourierMutation } from '../../hooks/useOrderCourier';
 import { useOrdersList, type StaffOrderRow } from '../../hooks/useOrders';
+import { useDebounce } from '../../hooks/useDebounce';
 import { api, apiErrorMessage } from '../../services/api';
 import { formatPrice } from '../../utils/formatPrice';
+import { downloadOrdersCsv } from '../../utils/ordersCsvExport';
 
 const steps: OrderStep[] = ['preparation', 'emballage', 'expediee', 'livree'];
 
@@ -39,9 +41,11 @@ const VendeuseCommandesPage = () => {
   const [drawerId, setDrawerId] = useState<string | null>(null);
   const [courierByOrder, setCourierByOrder] = useState<Record<string, string>>({});
 
+  const debouncedQ = useDebounce(q, 300);
+
   const params = useMemo(
     () => ({
-      q: q.trim() || undefined,
+      q: debouncedQ.trim() || undefined,
       step: stepFilter || undefined,
       city: city.trim() || undefined,
       fromISO: fromISO || undefined,
@@ -49,7 +53,7 @@ const VendeuseCommandesPage = () => {
       minTotalFcfa: minTotal.trim() ? Number(minTotal) : undefined,
       maxTotalFcfa: maxTotal.trim() ? Number(maxTotal) : undefined,
     }),
-    [q, stepFilter, city, fromISO, toISO, minTotal, maxTotal]
+    [debouncedQ, stepFilter, city, fromISO, toISO, minTotal, maxTotal]
   );
 
   const { data: orders = [], isPending, error, refetch, isFetching } = useOrdersList(params);
@@ -78,7 +82,15 @@ const VendeuseCommandesPage = () => {
     mutationFn: async ({ id, step }: { id: string; step: OrderStep }) => {
       await api.patch(`/orders/${id}/step`, { step });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['orders'] }),
+    onMutate: async ({ id, step }) => {
+      await qc.cancelQueries({ queryKey: ['orders'] });
+      qc.setQueriesData(
+        { queryKey: ['orders'] },
+        (old: StaffOrderRow[] | undefined) =>
+          old?.map((o) => (o.id === id ? { ...o, step } : o))
+      );
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['orders'] }),
   });
 
   const bulkStep = useMutation({
@@ -187,7 +199,17 @@ const VendeuseCommandesPage = () => {
         </p>
       )}
 
-      {isPending && <p className="text-sm text-neutral-500">Chargement…</p>}
+      {isPending && (
+        <div className="mb-4 space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="animate-pulse rounded-xl border border-white/10 bg-[#111] p-5">
+              <div className="mb-3 h-4 w-40 rounded bg-white/5" />
+              <div className="mb-2 h-6 w-56 rounded bg-white/5" />
+              <div className="h-3 w-24 rounded bg-white/5" />
+            </div>
+          ))}
+        </div>
+      )}
 
       {patchStep.isError && (
         <p className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
@@ -264,12 +286,26 @@ const VendeuseCommandesPage = () => {
           />
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-          <button
-            type="submit"
-            className="rounded-lg bg-tiktok-pink px-4 py-2 text-sm font-semibold text-white hover:brightness-110"
-          >
-            Appliquer
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="submit"
+              className="rounded-lg bg-tiktok-pink px-4 py-2 text-sm font-semibold text-white hover:brightness-110"
+            >
+              Appliquer
+            </button>
+            <button
+              type="button"
+              disabled={(orders as StaffOrderRow[]).length === 0}
+              onClick={() => {
+                const stamp = new Date().toISOString().slice(0, 10);
+                downloadOrdersCsv(orders as StaffOrderRow[], `commandes-${stamp}`);
+              }}
+              className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-white/10 disabled:opacity-40"
+            >
+              <Download className="h-4 w-4" strokeWidth={2} aria-hidden />
+              Exporter CSV
+            </button>
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs text-neutral-500">
               {selectedIds.length} sélectionnée(s)

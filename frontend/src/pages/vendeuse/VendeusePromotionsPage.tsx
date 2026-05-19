@@ -1,4 +1,5 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import PageHeader from '../../components/vendeuse/PageHeader';
 import {
   usePromotionsList,
@@ -9,12 +10,15 @@ import {
 import type { PromotionTypeApi } from '../../types/domain';
 import { formatPrice } from '../../utils/formatPrice';
 
+const PROMO_PAGE_SIZE = 10;
+
 const VendeusePromotionsPage = () => {
   const { data: promos = [], isPending, error, refetch } = usePromotionsList();
   const { data: stats = [] } = usePromotionStats();
   const { create, patch, remove } = usePromotionMutations();
 
   const [showForm, setShowForm] = useState(false);
+  const [promoPage, setPromoPage] = useState(1);
   const [code, setCode] = useState('');
   const [label, setLabel] = useState('');
   const [type, setType] = useState<PromotionTypeApi>('percent');
@@ -51,6 +55,12 @@ const VendeusePromotionsPage = () => {
       }
     );
   };
+
+  const totalPromoPages = Math.max(1, Math.ceil(promos.length / PROMO_PAGE_SIZE));
+  const pagedPromos = useMemo(
+    () => promos.slice((promoPage - 1) * PROMO_PAGE_SIZE, promoPage * PROMO_PAGE_SIZE),
+    [promos, promoPage]
+  );
 
   const formatValue = (p: PromotionRow) =>
     p.type === 'percent' ? `${p.value} %` : formatPrice(p.value);
@@ -105,7 +115,17 @@ const VendeusePromotionsPage = () => {
           {String(error)}
         </p>
       )}
-      {isPending && <p className="mb-4 text-sm text-neutral-500">Chargement…</p>}
+      {isPending && (
+        <div className="mb-4 overflow-hidden rounded-xl border border-white/10">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex animate-pulse gap-4 border-b border-white/5 bg-[#0c0c0c] px-4 py-3">
+              <div className="h-4 w-24 rounded bg-white/5" />
+              <div className="h-4 w-32 rounded bg-white/5" />
+              <div className="ml-auto h-4 w-16 rounded bg-white/5" />
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {stats.slice(0, 3).map((s) => (
@@ -217,7 +237,7 @@ const VendeusePromotionsPage = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
-            {promos.map((p) => (
+            {pagedPromos.map((p) => (
               <tr key={p.id} className="bg-[#0c0c0c] hover:bg-white/[0.02]">
                 <td className="px-4 py-3 font-mono font-bold text-tiktok-cyan">{p.code}</td>
                 <td className="px-4 py-3 text-neutral-300">{p.label}</td>
@@ -265,6 +285,35 @@ const VendeusePromotionsPage = () => {
           </tbody>
         </table>
       </div>
+
+      {totalPromoPages > 1 && (
+        <div className="mt-4 flex items-center justify-between rounded-xl border border-white/10 bg-[#111] px-4 py-3 text-sm text-neutral-400">
+          <span>
+            Page <span className="font-semibold text-white">{promoPage}</span> / {totalPromoPages}
+            <span className="ml-2 text-neutral-600">({promos.length} promos)</span>
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={promoPage <= 1}
+              onClick={() => setPromoPage((p) => p - 1)}
+              className="inline-flex items-center gap-1 rounded-lg border border-white/15 px-3 py-2 text-xs hover:bg-white/5 disabled:opacity-40"
+            >
+              <ChevronLeft className="h-4 w-4" strokeWidth={2} />
+              Précédent
+            </button>
+            <button
+              type="button"
+              disabled={promoPage >= totalPromoPages}
+              onClick={() => setPromoPage((p) => p + 1)}
+              className="inline-flex items-center gap-1 rounded-lg border border-white/15 px-3 py-2 text-xs hover:bg-white/5 disabled:opacity-40"
+            >
+              Suivant
+              <ChevronRight className="h-4 w-4" strokeWidth={2} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

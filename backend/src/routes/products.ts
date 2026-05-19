@@ -49,6 +49,7 @@ router.get('/', async (req, res, next) => {
   try {
     const q = listQuerySchema.parse(req.query);
     const { items, total, page, limit } = await listProducts(q);
+    res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
     res.json({ data: items, meta: listMeta(page, limit, total) });
   } catch (e) {
     next(e);
@@ -59,6 +60,7 @@ router.get('/:id', async (req, res, next) => {
   try {
     const p = await getProductById(req.params.id);
     if (!p) throw new HttpError(404, 'Produit introuvable');
+    res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
     res.json(productToDto(p));
   } catch (e) {
     next(e);

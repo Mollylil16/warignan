@@ -1,1 +1,0 @@
-// Entité TrackingEvent — à implémenter

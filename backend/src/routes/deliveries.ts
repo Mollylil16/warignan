@@ -16,6 +16,7 @@ const listQuerySchema = paginationQuerySchema.extend({
 
 const patchBodySchema = z.object({
   courierId: z.string().min(1).nullable().optional(),
+  clientPhone: z.string().max(30).nullable().optional(),
   status: z.enum(['planned', 'assigned', 'out', 'done']).optional(),
 });
 
@@ -23,6 +24,7 @@ function deliveryToDto(d: {
   id: string;
   orderRef: string;
   clientName: string;
+  clientPhone: string | null;
   address: string;
   dateISO: string;
   windowLabel: string;
@@ -35,6 +37,7 @@ function deliveryToDto(d: {
     id: d.id,
     orderRef: d.orderRef,
     clientName: d.clientName,
+    clientPhone: d.clientPhone,
     address: d.address,
     dateISO: d.dateISO,
     windowLabel: d.windowLabel,
@@ -125,8 +128,9 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
       }
     }
 
-    const data: { courierId?: string | null; status?: DeliveryStatus } = {};
+    const data: { courierId?: string | null; clientPhone?: string | null; status?: DeliveryStatus } = {};
     if (body.courierId !== undefined) data.courierId = body.courierId;
+    if (body.clientPhone !== undefined) data.clientPhone = body.clientPhone;
     if (body.status !== undefined) data.status = body.status;
 
     const updated = await prisma.delivery.update({

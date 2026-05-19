@@ -1,1 +1,0 @@
-// Entité OrderItem — à implémenter

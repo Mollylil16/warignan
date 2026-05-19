@@ -154,5 +154,68 @@ router.get(
   }
 );
 
+router.get(
+  '/admin',
+  requireAuth,
+  requireRoles('admin'),
+  async (_req, res, next) => {
+    try {
+      const last7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+      const [
+        confirmedPaymentsAgg,
+        ordersAgg,
+        ordersByStep,
+        reservationsByWorkflow,
+        payments7d,
+        usersCount,
+      ] = await Promise.all([
+        prisma.paymentEvent.aggregate({
+          where: { status: 'confirmed' },
+          _sum: { amountFcfa: true },
+        }),
+        prisma.order.aggregate({
+          _sum: { totalFcfa: true },
+          _count: { _all: true },
+        }),
+        prisma.order.groupBy({ by: ['step'], _count: { _all: true } }),
+        prisma.reservation.groupBy({ by: ['workflow'], _count: { _all: true } }),
+        prisma.paymentEvent.findMany({
+          where: { createdAt: { gte: last7d }, status: 'confirmed' },
+          select: { amountFcfa: true, createdAt: true },
+          orderBy: { createdAt: 'asc' },
+        }),
+        prisma.user.groupBy({ by: ['role'], _count: { _all: true } }),
+      ]);
+
+      // Tendance CA confirmé par jour (7 derniers jours)
+      const byDay: Record<string, number> = {};
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        byDay[d.toISOString().slice(0, 10)] = 0;
+      }
+      payments7d.forEach((p) => {
+        const day = p.createdAt.toISOString().slice(0, 10);
+        if (byDay[day] !== undefined) byDay[day] += p.amountFcfa;
+      });
+
+      res.json({
+        caReel: confirmedPaymentsAgg._sum.amountFcfa ?? 0,
+        caAttendu: ordersAgg._sum.totalFcfa ?? 0,
+        totalOrders: ordersAgg._count._all,
+        ordersByStep: Object.fromEntries(ordersByStep.map((r) => [r.step, r._count._all])),
+        reservationsByWorkflow: Object.fromEntries(
+          reservationsByWorkflow.map((r) => [r.workflow, r._count._all])
+        ),
+        trendCa7d: Object.entries(byDay).map(([date, amount]) => ({ date, amount })),
+        usersByRole: Object.fromEntries(usersCount.map((r) => [r.role, r._count._all])),
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 export default router;
 

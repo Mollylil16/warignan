@@ -1,4 +1,5 @@
 import { env } from '../config/env.js';
+import { logger } from '../lib/logger.js';
 import { reconcileGeniusPay } from './geniusPayReconcile.js';
 
 function asBool(v: string): boolean {
@@ -17,11 +18,12 @@ export function startGeniusPayReconcileCron() {
     running = true;
     try {
       const res = await reconcileGeniusPay(days);
-      console.log(
-        `[geniuspay] reconcile OK: scanned=${res.scanned} intents=${res.updatedIntents} skipped=${res.skipped} (${res.from}..${res.to})`
+      logger.info(
+        { scanned: res.scanned, intents: res.updatedIntents, skipped: res.skipped, from: res.from, to: res.to },
+        '[geniuspay] reconcile OK'
       );
     } catch (e) {
-      console.error('[geniuspay] reconcile FAILED', e);
+      logger.error({ err: e }, '[geniuspay] reconcile FAILED');
     } finally {
       running = false;
     }
@@ -31,6 +33,6 @@ export function startGeniusPayReconcileCron() {
   void tick();
   const t = setInterval(() => void tick(), minutes * 60_000);
   t.unref?.();
-  console.log(`[geniuspay] reconcile cron enabled: every ${minutes} min, days=${days}`);
+  logger.info({ minutes, days }, '[geniuspay] reconcile cron activé');
 }
 

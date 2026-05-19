@@ -1,1 +1,0 @@
-// DeliveriesModule — à implémenter

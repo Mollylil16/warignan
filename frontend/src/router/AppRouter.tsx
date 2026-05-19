@@ -26,6 +26,8 @@ import UsersPage from '../pages/admin/UsersPage';
 import LivreurLayout from '../pages/livreur/LivreurLayout';
 import MesLivraisonsPage from '../pages/livreur/MesLivraisonsPage';
 import StaffLoginGate from '../components/staff/StaffLoginGate';
+import NotFoundPage from '../pages/client/NotFoundPage';
+import ProduitPage from '../pages/client/ProduitPage';
 
 const AppRouter = () => {
   return (
@@ -78,12 +80,14 @@ const AppRouter = () => {
         <Route element={<ShopLayout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/fouille" element={<FouillePage />} />
+          <Route path="/produit/:productId" element={<ProduitPage />} />
           <Route path="/paiement/reservation" element={<PaiementReservationPage />} />
           <Route path="/paiement/commande" element={<PaiementCommandePage />} />
           <Route path="/paiement/retour" element={<PaiementRetourPage />} />
           <Route path="/commander/:productId" element={<CommandePage />} />
           <Route path="/reserver/:productId" element={<ReservationPage />} />
           <Route path="/suivi" element={<SuiviCommandePage />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

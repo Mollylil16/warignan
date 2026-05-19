@@ -1,1 +1,0 @@
-// Décorateur @Roles — à implémenter

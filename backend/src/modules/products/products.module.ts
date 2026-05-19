@@ -1,1 +1,0 @@
-// ProductsModule — à implémenter

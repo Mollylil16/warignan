@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client';
 import express, { Router } from 'express';
 import { z } from 'zod';
 import { env } from '../config/env.js';
+import { logger } from '../lib/logger.js';
 import { prisma } from '../lib/prisma.js';
 import { verifyHmacSha256Hex } from '../lib/webhookSignature.js';
 import { HttpError } from '../middleware/errorHandler.js';
@@ -207,9 +208,7 @@ router.post('/geniuspay', rawBodyParser, async (req, res, next) => {
         externalId,
         payload: json as Prisma.InputJsonValue,
       });
-      console.log(
-        `[webhook][geniuspay] event=${event} ref=${ref} flow=${flow} amount=${amountFcfa} provider=${provider} status=${status}`
-      );
+      logger.info({ event, ref, flow, amount: amountFcfa, provider, status }, '[webhook][geniuspay]');
     }
 
     if (ref && txRef) {

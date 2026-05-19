@@ -6,11 +6,10 @@ import {
   Radio,
   Sparkles,
 } from 'lucide-react';
+import { useLiveStatus } from '../../hooks/useLiveStatus';
 
-/**
- * Page d'accueil : présentation, arguments, puis accès au catalogue via /fouille.
- */
 const HomePage = () => {
+  const isLive = useLiveStatus();
   return (
     <div className="relative overflow-hidden bg-bg-void">
       {/* Fond décoratif discret */}
@@ -25,17 +24,19 @@ const HomePage = () => {
 
       {/* --- Hero plein écran (sous la navbar) --- */}
       <section className="relative mx-auto flex min-h-[calc(100dvh-3.5rem)] max-w-4xl flex-col justify-center px-4 pb-16 pt-8 text-center sm:min-h-[calc(100dvh-4rem)] sm:px-6 sm:pb-20 sm:pt-10 md:max-w-5xl md:px-8">
-        <div className="mb-5 flex justify-center sm:mb-6">
-          <div
-            className="inline-flex items-center gap-2 rounded-full border border-live-red/80 bg-live-red/10 px-3 py-1 text-xs font-bold tracking-widest text-live-red"
-          >
-            <span
-              className="h-2 w-2 rounded-full bg-live-red animate-pulse-dot"
-              aria-hidden
-            />
-            LIVE EN COURS
+        {isLive && (
+          <div className="mb-5 flex justify-center sm:mb-6">
+            <div
+              className="inline-flex items-center gap-2 rounded-full border border-live-red/80 bg-live-red/10 px-3 py-1 text-xs font-bold tracking-widest text-live-red"
+            >
+              <span
+                className="h-2 w-2 rounded-full bg-live-red animate-pulse-dot"
+                aria-hidden
+              />
+              LIVE EN COURS
+            </div>
           </div>
-        </div>
+        )}
 
         <h1
           className="mb-3 text-[clamp(1.5rem,5vw,2.75rem)] font-extrabold uppercase leading-[1.1] tracking-tight text-[#BA4F64] sm:mb-4"

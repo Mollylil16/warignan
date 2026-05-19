@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { ZodError } from 'zod';
+import { logger } from '../lib/logger.js';
 
 export class HttpError extends Error {
   constructor(
@@ -23,6 +24,6 @@ export function errorHandler(
   if (err instanceof ZodError) {
     return res.status(400).json({ error: 'Données invalides', details: err.flatten() });
   }
-  console.error('[API]', err);
+  logger.error({ err }, '[API] Erreur interne');
   return res.status(500).json({ error: 'Erreur serveur interne' });
 }

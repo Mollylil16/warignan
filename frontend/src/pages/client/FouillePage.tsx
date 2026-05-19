@@ -1,8 +1,6 @@
 
 
-import { useState, useMemo } from 'react';
-// useState = pour stocker et modifier des données réactives
-// useMemo = pour mémoriser un calcul coûteux (éviter de recalculer à chaque rendu)
+import { useState, useMemo, useEffect, useRef } from 'react';
 
 import { productFilters, ProductCategory } from '../../types';
 import { useProducts } from '../../hooks/useProducts';
@@ -13,28 +11,29 @@ import ProductCard from '../../components/shared/ProductCard';
 const FouillePage = () => {
   const { data: catalog, isLoading, error } = useProducts();
   const [searchQuery, setSearchQuery] = useState('');
+  const priceTouchedRef = useRef(false);
 
-  // ---- ÉTAT DES FILTRES ----
-  // useState retourne [valeur actuelle, fonction pour la modifier]
   const [filters, setFilters] = useState<productFilters>({
-    category: 'ALL',          // Par défaut : tout afficher
-    sortBy: 'newest',          // Par défaut : les plus récents
-    maxPrice: 15500,           // Par défaut : prix max à fond
+    category: 'ALL',
+    sortBy: 'newest',
+    maxPrice: 0,
   });
 
-  // ---- FONCTION DE MISE À JOUR DES FILTRES ----
-  // Partial<ProductFilters> = on peut passer un seul filtre
-  // Le spread (...) fusionne l'ancien état avec le nouveau
   const handleFilterChange = (newFilters: Partial<productFilters>) => {
+    if ('maxPrice' in newFilters) priceTouchedRef.current = true;
     setFilters((prev: productFilters) => ({ ...prev, ...newFilters }));
-    // Exemple : si on passe { category: 'ROBE' }
-    // le résultat sera { category: 'ROBE', sortBy: 'newest', maxPrice: 15500 }
   };
 
   // ---- PRIX MAX PARMI TOUS LES PRODUITS ----
-  // Pour définir la limite haute du slider
   const maxProductPrice =
     catalog.length > 0 ? Math.max(...catalog.map((p) => p.prix), 1000) : 1000;
+
+  // Sync maxPrice depuis le catalogue dès le premier chargement (si l'utilisateur n'a pas bougé le slider)
+  useEffect(() => {
+    if (!priceTouchedRef.current && catalog.length > 0) {
+      setFilters((prev) => ({ ...prev, maxPrice: maxProductPrice }));
+    }
+  }, [maxProductPrice, catalog.length]);
 
   // ---- FILTRAGE ET TRI DES PRODUITS ----
   // useMemo = ce calcul ne se refait QUE si filters ou le catalogue changent

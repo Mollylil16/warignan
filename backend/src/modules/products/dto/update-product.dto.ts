@@ -1,1 +1,0 @@
-// UpdateProductDto — à implémenter

@@ -15,6 +15,7 @@ import productsRouter from './routes/products.js';
 import promotionsRouter from './routes/promotions.js';
 import reservationsRouter from './routes/reservations.js';
 import dashboardRouter from './routes/dashboard.js';
+import settingsRouter from './routes/settings.js';
 import trackingRouter from './routes/tracking.js';
 import usersRouter from './routes/users.js';
 import webhooksRouter from './routes/webhooks.js';
@@ -59,6 +60,7 @@ app.use('/api/payments', paymentsRouter);
 app.use('/api/media', mediaRouter);
 app.use('/api/deliveries', deliveriesRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/settings', settingsRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ error: 'Route introuvable' });

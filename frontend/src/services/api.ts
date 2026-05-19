@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { toast } from 'sonner';
 
 /** En dev, Vite proxy `/api` → backend. En prod, définir `VITE_API_BASE_URL` si l’API est sur un autre domaine. */
 const DEFAULT_API = '/api';
@@ -53,7 +54,32 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (res) => res,
-  (err) => Promise.reject(err)
+  (err) => {
+    if (!axios.isAxiosError(err)) return Promise.reject(err);
+
+    const status = err.response?.status;
+
+    if (status === 401 && err.config?.headers?.Authorization) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+        window.location.reload();
+      }
+      return Promise.reject(err);
+    }
+
+    // Affiche un toast pour les erreurs 4xx/5xx (hors 401 géré ci-dessus)
+    const data = err.response?.data as { error?: string } | undefined;
+    const message =
+      (typeof data?.error === 'string' && data.error.trim()) ||
+      err.message ||
+      'Une erreur est survenue';
+
+    if (status && status >= 400) {
+      toast.error(message);
+    }
+
+    return Promise.reject(err);
+  }
 );
 
 export { AUTH_STORAGE_KEY };

@@ -1,1 +1,0 @@
-// ProductsController — à implémenter

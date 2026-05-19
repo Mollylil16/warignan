@@ -1,5 +1,5 @@
-import { type ChangeEvent, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type ChangeEvent, useCallback, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FolderOpen, ImagePlus, Trash2 } from 'lucide-react';
 import PageHeader from '../../components/vendeuse/PageHeader';
 import type { MediaGallerySlot } from '../../types/domain';
@@ -59,6 +59,8 @@ type MediaRow = {
 const VendeuseMediasPage = () => {
   const qc = useQueryClient();
   const [defaultSlot, setDefaultSlot] = useState<ShopMediaSection>('banners');
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const listQ = useQuery({
     queryKey: ['media'],
@@ -70,28 +72,53 @@ const VendeuseMediasPage = () => {
     },
   });
 
-  const uploadM = useMutation({
-    mutationFn: async (file: File) => {
+  const uploadFile = useCallback(
+    async (file: File, slot: MediaGallerySlot) => {
+      const key = `${file.name}-${Date.now()}`;
+      setUploadProgress((prev) => ({ ...prev, [key]: 0 }));
       const fd = new FormData();
       fd.append('file', file);
-      fd.append('gallery', defaultSlot as MediaGallerySlot);
+      fd.append('gallery', slot);
       fd.append('isPrimary', 'false');
-      await api.post('/media', fd);
+      try {
+        await api.post('/media', fd, {
+          onUploadProgress: (e) => {
+            if (e.total) {
+              const pct = Math.round((e.loaded / e.total) * 100);
+              setUploadProgress((prev) => ({ ...prev, [key]: pct }));
+            }
+          },
+        });
+        await qc.invalidateQueries({ queryKey: ['media'] });
+      } finally {
+        setUploadProgress((prev) => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+      }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['media'] }),
-  });
+    [qc]
+  );
 
-  const deleteM = useMutation({
-    mutationFn: async (id: string) => {
-      await api.delete(`/media/${id}`);
+  const deleteMedia = useCallback(
+    async (id: string) => {
+      setDeleteId(id);
+      try {
+        await api.delete(`/media/${id}`);
+        await qc.invalidateQueries({ queryKey: ['media'] });
+      } finally {
+        setDeleteId(null);
+      }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['media'] }),
-  });
+    [qc]
+  );
 
   const onFiles = (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files?.length) return;
-    Array.from(files).forEach((f) => uploadM.mutate(f));
+    const slot = defaultSlot as MediaGallerySlot;
+    Array.from(files).forEach((f) => void uploadFile(f, slot));
     e.target.value = '';
   };
 
@@ -153,6 +180,28 @@ const VendeuseMediasPage = () => {
         </button>
       </div>
 
+      {Object.entries(uploadProgress).length > 0 && (
+        <div className="mb-6 space-y-2 rounded-xl border border-white/10 bg-[#111] p-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            Téléversement en cours…
+          </p>
+          {Object.entries(uploadProgress).map(([key, pct]) => (
+            <div key={key}>
+              <div className="mb-1 flex justify-between text-[11px] text-neutral-400">
+                <span className="truncate max-w-[70%]">{key.replace(/-\d+$/, '')}</span>
+                <span>{pct}%</span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-tiktok-pink transition-all duration-200"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {GALLERY_ORDER.map((slot) => {
         const list = byGallery.get(slot) ?? [];
         if (list.length === 0) return null;
@@ -188,15 +237,16 @@ const VendeuseMediasPage = () => {
                     )}
                     <button
                       type="button"
-                      disabled={deleteM.isPending}
+                      disabled={deleteId === m.id}
                       onClick={() => {
-                        if (window.confirm('Supprimer ce média sur le serveur ?')) deleteM.mutate(m.id);
+                        if (window.confirm('Supprimer ce média sur le serveur ?'))
+                          void deleteMedia(m.id);
                       }}
-                      className="flex w-full items-center justify-center gap-1 rounded-lg border border-red-500/30 py-1.5 text-[10px] font-bold uppercase text-red-400 hover:bg-red-500/10"
+                      className="flex w-full items-center justify-center gap-1 rounded-lg border border-red-500/30 py-1.5 text-[10px] font-bold uppercase text-red-400 hover:bg-red-500/10 disabled:opacity-50"
                       aria-label="Supprimer"
                     >
                       <Trash2 className="h-4 w-4" strokeWidth={2} />
-                      Supprimer
+                      {deleteId === m.id ? 'Suppression…' : 'Supprimer'}
                     </button>
                   </figcaption>
                 </figure>

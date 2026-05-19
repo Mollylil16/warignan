@@ -4,16 +4,39 @@ import {
   ImageIcon,
   Package,
   Percent,
+  Radio,
   ReceiptText,
   ShieldAlert,
   Truck,
   UserCheck,
 } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import StatCard from '../../components/vendeuse/StatCard';
 import PageHeader from '../../components/vendeuse/PageHeader';
 import { useActivePromotionsCount } from '../../hooks/usePromotions';
 import { useVendeuseOverview } from '../../hooks/useVendeuseOverview';
 import { formatPrice } from '../../utils/formatPrice';
+import { api } from '../../services/api';
+
+function useLiveToggle() {
+  const qc = useQueryClient();
+  const { data: isLive = false } = useQuery({
+    queryKey: ['settings', 'live'],
+    queryFn: async () => {
+      const { data } = await api.get<{ isLive: boolean }>('/settings/live');
+      return data.isLive;
+    },
+    staleTime: 10_000,
+  });
+  const mutation = useMutation({
+    mutationFn: async (value: boolean) => {
+      const { data } = await api.patch<{ isLive: boolean }>('/settings/live', { isLive: value });
+      return data.isLive;
+    },
+    onSuccess: (value) => qc.setQueryData(['settings', 'live'], value),
+  });
+  return { isLive, toggle: () => mutation.mutate(!isLive), isPending: mutation.isPending };
+}
 
 const fmt = (iso: string) =>
   new Date(iso).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
@@ -21,6 +44,7 @@ const fmt = (iso: string) =>
 const VendeuseDashboardPage = () => {
   const { data: overview, isPending: overviewLoading, isError: overviewError } = useVendeuseOverview();
   const { data: promosActives = 0 } = useActivePromotionsCount();
+  const { isLive, toggle, isPending: liveTogglePending } = useLiveToggle();
 
   const awaitingValidation = overview?.kpi.reservations.awaiting_validation ?? 0;
   const awaitingDeposit = overview?.kpi.reservations.awaiting_deposit ?? 0;
@@ -46,12 +70,60 @@ const VendeuseDashboardPage = () => {
     <div className="max-w-6xl">
       <PageHeader
         title="Tableau de bord"
-        description="Vue synthétique alimentée par l’API."
+        description="Vue synthétique alimentée par l'API."
       />
+
+      {/* ── LIVE Toggle ── */}
+      <div
+        className={`mb-8 flex flex-col items-center gap-4 rounded-2xl border p-6 text-center transition-colors sm:flex-row sm:items-center sm:justify-between sm:text-left ${
+          isLive
+            ? 'border-live-red/40 bg-live-red/10'
+            : 'border-white/10 bg-[#111]'
+        }`}
+      >
+        <div className="flex items-center gap-4">
+          <div
+            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${
+              isLive ? 'bg-live-red/20' : 'bg-white/5'
+            }`}
+          >
+            <Radio
+              className={`h-6 w-6 ${isLive ? 'text-live-red' : 'text-neutral-500'}`}
+              strokeWidth={2}
+              aria-hidden
+            />
+            {isLive && (
+              <span className="absolute h-3 w-3 animate-ping rounded-full bg-live-red/60" />
+            )}
+          </div>
+          <div>
+            <p className={`text-lg font-bold ${isLive ? 'text-live-red' : 'text-neutral-300'}`}>
+              {isLive ? 'LIVE EN COURS' : 'Live inactif'}
+            </p>
+            <p className="text-xs text-neutral-500">
+              {isLive
+                ? 'Le badge clignote sur la boutique — tes clientes le voient maintenant'
+                : 'Clique quand tu démarres ton live TikTok'}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          disabled={liveTogglePending}
+          onClick={toggle}
+          className={`shrink-0 rounded-xl px-8 py-3 text-sm font-extrabold uppercase tracking-widest transition-all disabled:opacity-50 ${
+            isLive
+              ? 'bg-live-red text-white hover:brightness-90'
+              : 'bg-white/10 text-white hover:bg-white/20'
+          }`}
+        >
+          {liveTogglePending ? '…' : isLive ? 'Terminer le live' : 'Démarrer le live'}
+        </button>
+      </div>
 
       {overviewError && (
         <p className="mb-6 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
-          Impossible de charger les indicateurs. Vérifie que l’API tourne et que tu es bien connectée.
+          Impossible de charger les indicateurs. Vérifie que l'API tourne et que tu es bien connectée.
         </p>
       )}
       {overviewLoading && !overview && !overviewError && (
@@ -83,7 +155,7 @@ const VendeuseDashboardPage = () => {
               to="/vendeuse/commandes"
             />
             <StatCard
-              label="Expédiées aujourd’hui"
+              label="Expédiées aujourd'hui"
               value={shippedToday}
               hint="Commandes passées à expédiée"
               tone="cyan"
@@ -157,7 +229,7 @@ const VendeuseDashboardPage = () => {
         ) : !overview ? (
           <p className="p-5 text-sm text-neutral-500">Indicateurs indisponibles.</p>
         ) : todo.length === 0 ? (
-          <p className="p-5 text-sm text-neutral-500">Rien d’urgent détecté.</p>
+          <p className="p-5 text-sm text-neutral-500">Rien d'urgent détecté.</p>
         ) : (
           <ul className="divide-y divide-white/5">
             {todo.map((t) => (

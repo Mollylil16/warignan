@@ -1,9 +1,19 @@
+import { Toaster } from 'sonner';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import AppRouter from './router/AppRouter';
 
 function App() {
-  // App retourne simplement le routeur
-  // Le routeur s'occupe d'afficher le bon composant selon l'URL
-  return <AppRouter />;
+  return (
+    <ErrorBoundary>
+      <AppRouter />
+      <Toaster
+        position="top-right"
+        richColors
+        closeButton
+        duration={4000}
+      />
+    </ErrorBoundary>
+  );
 }
 
 export default App;

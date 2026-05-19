@@ -2,8 +2,10 @@ import { type FormEvent, useCallback, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Download,
   PlusCircle,
   RefreshCw,
@@ -40,6 +42,7 @@ const VendeusePaiementsPage = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(100);
   const [exporting, setExporting] = useState(false);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [showManual, setShowManual] = useState(false);
   const [mRef, setMRef] = useState('');
   const [mFlow, setMFlow] = useState<'order' | 'reservation'>('order');
@@ -276,7 +279,18 @@ const VendeusePaiementsPage = () => {
           Erreur de chargement : {String(error)}
         </p>
       )}
-      {isPending && <p className="mb-4 text-sm text-neutral-500">Chargement…</p>}
+      {isPending && (
+        <div className="mb-4 overflow-hidden rounded-xl border border-white/10">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex animate-pulse gap-4 border-b border-white/5 bg-[#0c0c0c] px-4 py-3">
+              <div className="h-4 w-32 rounded bg-white/5" />
+              <div className="h-4 w-20 rounded bg-white/5" />
+              <div className="h-4 w-16 rounded bg-white/5" />
+              <div className="ml-auto h-4 w-24 rounded bg-white/5" />
+            </div>
+          ))}
+        </div>
+      )}
 
       <form
         onSubmit={handleSubmit}
@@ -413,92 +427,114 @@ const VendeusePaiementsPage = () => {
       </form>
 
       <div className="overflow-x-auto rounded-xl border border-white/10">
-        <table className="w-full min-w-[1180px] text-left text-sm">
+        <table className="w-full min-w-[720px] text-left text-sm">
           <thead className="border-b border-white/10 bg-[#111] text-xs uppercase tracking-wide text-neutral-500">
             <tr>
               <th className="px-4 py-3 font-semibold">Référence</th>
               <th className="px-4 py-3 font-semibold">Montant</th>
-              <th className="px-4 py-3 font-semibold">Cumul confirmé</th>
-              <th className="px-4 py-3 font-semibold">Objectif</th>
-              <th className="px-4 py-3 font-semibold">Reste objectif</th>
               <th className="px-4 py-3 font-semibold">Flow</th>
-              <th className="px-4 py-3 font-semibold">Provider</th>
               <th className="px-4 py-3 font-semibold">Statut</th>
               <th className="px-4 py-3 font-semibold">Match</th>
               <th className="px-4 py-3 font-semibold">Cible</th>
               <th className="px-4 py-3 font-semibold text-right">Date</th>
+              <th className="px-3 py-3 font-semibold" aria-label="Détails" />
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
-            {filtered.map((r) => (
-              <tr key={r.id} className="bg-[#0c0c0c] hover:bg-white/[0.02]">
-                <td className="px-4 py-3 font-mono text-xs text-tiktok-cyan">{r.reference}</td>
-                <td className="px-4 py-3 font-semibold text-white">{formatPrice(r.amountFcfa)}</td>
-                <td className="px-4 py-3 text-neutral-200">{formatPrice(r.confirmedCumulativeFcfa ?? 0)}</td>
-                <td className="px-4 py-3 text-neutral-300">
-                  {r.expectedFcfa != null ? formatPrice(r.expectedFcfa) : '—'}
-                </td>
-                <td className="px-4 py-3">
-                  {r.balanceAfterFcfa != null ? (
-                    <span
-                      className={
-                        r.balanceAfterFcfa === 0
-                          ? 'font-semibold text-status-green'
-                          : 'font-medium text-amber-200'
-                      }
-                    >
-                      {formatPrice(r.balanceAfterFcfa)}
-                      {r.balanceAfterFcfa === 0 ? ' · soldé' : ''}
-                    </span>
-                  ) : (
-                    <span className="text-neutral-600">—</span>
+            {filtered.map((r) => {
+              const expanded = expandedRows.has(r.id);
+              return (
+                <>
+                  <tr key={r.id} className="bg-[#0c0c0c] hover:bg-white/[0.02]">
+                    <td className="px-4 py-3 font-mono text-xs text-tiktok-cyan">{r.reference}</td>
+                    <td className="px-4 py-3 font-semibold text-white">{formatPrice(r.amountFcfa)}</td>
+                    <td className="px-4 py-3 text-neutral-300">{r.flow}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${statusPill(r.status)}`}
+                      >
+                        {r.status === 'confirmed' ? (
+                          <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                        ) : r.status === 'failed' ? (
+                          <XCircle className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                        ) : (
+                          <AlertTriangle className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                        )}
+                        {r.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${matchPill(r.match)}`}>
+                        {r.match ? 'OK' : 'À traiter'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-neutral-400">
+                      {r.target ? (
+                        <span>
+                          {r.target.kind === 'order' ? 'Cmd' : 'Rés.'} —{' '}
+                          <span className="text-white">{r.target.clientName}</span>
+                        </span>
+                      ) : (
+                        <span className="text-amber-200">Aucune cible</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right text-xs text-neutral-500">
+                      {new Date(r.createdAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedRows((prev) => {
+                            const next = new Set(prev);
+                            expanded ? next.delete(r.id) : next.add(r.id);
+                            return next;
+                          })
+                        }
+                        className="rounded p-1 text-neutral-500 hover:bg-white/5 hover:text-neutral-300"
+                        aria-label={expanded ? 'Masquer détails' : 'Voir détails'}
+                      >
+                        {expanded ? (
+                          <ChevronUp className="h-4 w-4" strokeWidth={2} />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" strokeWidth={2} />
+                        )}
+                      </button>
+                    </td>
+                  </tr>
+                  {expanded && (
+                    <tr key={`${r.id}-detail`} className="bg-[#080808]">
+                      <td colSpan={8} className="px-4 py-3">
+                        <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-xs text-neutral-400 sm:grid-cols-4">
+                          <div>
+                            <span className="text-neutral-600">Provider</span>
+                            <p className="font-semibold text-neutral-200">{r.provider ?? '—'}</p>
+                          </div>
+                          <div>
+                            <span className="text-neutral-600">Cumul confirmé</span>
+                            <p className="font-semibold text-neutral-200">{formatPrice(r.confirmedCumulativeFcfa ?? 0)}</p>
+                          </div>
+                          <div>
+                            <span className="text-neutral-600">Objectif</span>
+                            <p className="font-semibold text-neutral-200">
+                              {r.expectedFcfa != null ? formatPrice(r.expectedFcfa) : '—'}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-neutral-600">Reste objectif</span>
+                            <p className={`font-semibold ${r.balanceAfterFcfa === 0 ? 'text-status-green' : 'text-amber-200'}`}>
+                              {r.balanceAfterFcfa != null
+                                ? `${formatPrice(r.balanceAfterFcfa)}${r.balanceAfterFcfa === 0 ? ' · soldé' : ''}`
+                                : '—'}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
                   )}
-                </td>
-                <td className="px-4 py-3 text-neutral-300">{r.flow}</td>
-                <td className="px-4 py-3 text-neutral-300">{r.provider ?? '—'}</td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${statusPill(
-                      r.status
-                    )}`}
-                  >
-                    {r.status === 'confirmed' ? (
-                      <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                    ) : r.status === 'failed' ? (
-                      <XCircle className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                    ) : (
-                      <AlertTriangle className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                    )}
-                    {r.status}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${matchPill(
-                      r.match
-                    )}`}
-                  >
-                    {r.match ? 'OK' : 'À traiter'}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-neutral-400">
-                  {r.target ? (
-                    <span>
-                      {r.target.kind === 'order' ? 'Commande' : 'Réservation'} —{' '}
-                      <span className="text-white">{r.target.clientName}</span>
-                    </span>
-                  ) : (
-                    <span className="text-amber-200">Aucune cible</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-right text-xs text-neutral-500">
-                  {new Date(r.createdAt).toLocaleString('fr-FR', {
-                    dateStyle: 'short',
-                    timeStyle: 'short',
-                  })}
-                </td>
-              </tr>
-            ))}
+                </>
+              );
+            })}
           </tbody>
         </table>
       </div>

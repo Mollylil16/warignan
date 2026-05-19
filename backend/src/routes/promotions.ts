@@ -47,6 +47,7 @@ router.get('/active', async (_req, res, next) => {
       },
       orderBy: { code: 'asc' },
     });
+    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
     res.json({ data: rows.map(promotionToDto) });
   } catch (e) {
     next(e);
