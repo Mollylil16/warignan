@@ -13,6 +13,7 @@ export type DeliveryRow = {
   windowLabel: string;
   courierId: string | null;
   status: string;
+  numeroSuivi: string | null;
   createdAt: string;
   updatedAt: string;
 };

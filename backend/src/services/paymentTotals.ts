@@ -1,4 +1,54 @@
+import { logger } from '../lib/logger.js';
 import { prisma } from '../lib/prisma.js';
+
+/** Analyse "CR-ABC ×2, RB-XYZ ×1" → [{ code, qty }] */
+function parseItemsSummary(summary: string): Array<{ code: string; qty: number }> {
+  return summary
+    .split(',')
+    .map((part) => part.trim())
+    .flatMap((part) => {
+      // format : CODE ×QTY (le × est U+00D7)
+      const m = part.match(/^(\S+)\s+×(\d+)$/u);
+      if (!m) return [];
+      return [{ code: m[1], qty: parseInt(m[2], 10) }];
+    });
+}
+
+/**
+ * Après confirmation de paiement d'une commande, décrémente le stock de chaque
+ * produit commandé et passe le statut à "sold" si le stock tombe à 0.
+ */
+export async function syncProductStockFromOrder(orderReference: string): Promise<void> {
+  const ref = orderReference.trim().toUpperCase();
+  const order = await prisma.order.findUnique({ where: { reference: ref } });
+  if (!order) return;
+
+  const lines = parseItemsSummary(order.itemsSummary);
+  if (lines.length === 0) return;
+
+  const codes = lines.map((l) => l.code);
+  const products = await prisma.product.findMany({ where: { code: { in: codes } } });
+
+  await prisma.$transaction(async (tx) => {
+    for (const line of lines) {
+      const product = products.find((p) => p.code === line.code);
+      if (!product) continue;
+
+      const newStock = Math.max(0, product.stock - line.qty);
+      const newStatus = newStock <= 0 ? 'sold' : product.status;
+
+      await tx.product.update({
+        where: { id: product.id },
+        data: { stock: newStock, status: newStatus },
+      });
+
+      logger.info(
+        { code: product.code, oldStock: product.stock, newStock, status: newStatus },
+        '[stock] mis à jour après paiement'
+      );
+    }
+  });
+}
 
 /** Somme des paiements confirmés pour une référence (commande ou réservation). */
 export async function sumConfirmedPayments(
@@ -21,6 +71,7 @@ export async function syncOrderPaidAtFromEvents(orderReference: string): Promise
 
   const paid = await sumConfirmedPayments(ref, 'order');
   const fullyPaid = paid >= order.totalFcfa;
+  const wasAlreadyPaid = order.paidAt !== null;
 
   await prisma.order.update({
     where: { reference: ref },
@@ -28,6 +79,11 @@ export async function syncOrderPaidAtFromEvents(orderReference: string): Promise
       paidAt: fullyPaid ? (order.paidAt ?? new Date()) : null,
     },
   });
+
+  // Décrémente le stock uniquement lors du premier paiement intégral
+  if (fullyPaid && !wasAlreadyPaid) {
+    await syncProductStockFromOrder(ref);
+  }
 }
 
 /**

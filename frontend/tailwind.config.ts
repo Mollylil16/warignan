@@ -19,17 +19,20 @@ const config: Config = {
         'tiktok-cyan': '#25F4EE',
         'live-red': '#FF0000',
         'reserve-purple': '#9146FF',
-        'bg-void': '#050505',
-        'surface-dark': '#121212',
+        /* Noir chaud principal — remplace le noir pur #050505 */
+        'bg-void': '#0D0B0C',
+        /* Surface des cartes — contraste subtil avec le fond */
+        'surface-dark': '#1A1718',
         'surface-border': '#2A2A2A',
         'status-green': '#00FF55',
         'status-orange': '#FF9900',
       },
       fontFamily: {
         // On ajoute nos polices custom
-        // Utilisables comme : font-grotesk, font-inter
+        // Utilisables comme : font-grotesk, font-inter, font-playfair
         grotesk: ['"Space Grotesk"', 'sans-serif'],
         inter: ['Inter', 'sans-serif'],
+        playfair: ['"Playfair Display"', 'serif'],
       },
       keyframes: {
         ctaGlow: {

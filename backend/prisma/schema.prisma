@@ -99,6 +99,7 @@ model User {
   email        String   @unique
   passwordHash String
   displayName  String
+  phone        String?
   role         Role     @default(client)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -180,19 +181,19 @@ model MediaAsset {
   createdAt DateTime     @default(now())
 }
 
-/// Modèle préparé — routes livreur à implémenter par le junior.
 model Delivery {
-  id          String         @id @default(cuid())
-  orderRef    String
-  clientName  String
-  clientPhone String?
-  address     String
-  dateISO     String
-  windowLabel String
-  courierId   String?
-  status      DeliveryStatus @default(planned)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id           String         @id @default(cuid())
+  orderRef     String
+  clientName   String
+  clientPhone  String?
+  address      String
+  dateISO      String
+  windowLabel  String
+  courierId    String?
+  status       DeliveryStatus @default(planned)
+  numeroSuivi  String?        @unique
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 }
 
 model Promotion {

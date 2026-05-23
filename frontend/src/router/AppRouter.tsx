@@ -24,10 +24,12 @@ import StatsPage from '../pages/admin/StatsPage';
 import AllOrdersPage from '../pages/admin/AllOrdersPage';
 import UsersPage from '../pages/admin/UsersPage';
 import LivreurLayout from '../pages/livreur/LivreurLayout';
+import LivreurLoginPage from '../pages/livreur/LivreurLoginPage';
 import MesLivraisonsPage from '../pages/livreur/MesLivraisonsPage';
 import StaffLoginGate from '../components/staff/StaffLoginGate';
 import NotFoundPage from '../pages/client/NotFoundPage';
 import ProduitPage from '../pages/client/ProduitPage';
+import SuiviColisPage from '../pages/client/SuiviColisPage';
 
 const AppRouter = () => {
   return (
@@ -66,10 +68,17 @@ const AppRouter = () => {
           <Route path="utilisateurs" element={<UsersPage />} />
         </Route>
 
+        {/* Page de connexion dédiée aux livreurs (username + mot de passe) */}
+        <Route path="/livreur/login" element={<LivreurLoginPage />} />
+
         <Route
           path="/livreur"
           element={
-            <StaffLoginGate title="Espace livreur" allowedRoles={['livreur']}>
+            <StaffLoginGate
+              title="Espace livreur"
+              allowedRoles={['livreur']}
+              loginRedirect="/livreur/login"
+            >
               <LivreurLayout />
             </StaffLoginGate>
           }
@@ -81,6 +90,9 @@ const AppRouter = () => {
           <Route path="/" element={<HomePage />} />
           <Route path="/fouille" element={<FouillePage />} />
           <Route path="/produit/:productId" element={<ProduitPage />} />
+          {/* Alias avec 's' pour compatibilité avec les liens externes */}
+          <Route path="/produits/:productId" element={<ProduitPage />} />
+          <Route path="/colis" element={<SuiviColisPage />} />
           <Route path="/paiement/reservation" element={<PaiementReservationPage />} />
           <Route path="/paiement/commande" element={<PaiementCommandePage />} />
           <Route path="/paiement/retour" element={<PaiementRetourPage />} />

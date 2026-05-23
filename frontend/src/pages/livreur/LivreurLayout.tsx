@@ -37,7 +37,9 @@ const LivreurLayout = () => {
         </NavLink>
         <div className="mt-4 border-t border-white/10 pt-4">
           <p className="mb-0.5 truncate text-xs font-medium text-neutral-300">{user?.displayName}</p>
-          <p className="mb-2 truncate text-[10px] text-neutral-500">{user?.email}</p>
+          {user?.phone && (
+            <p className="mb-2 truncate text-[10px] text-neutral-500">{user.phone}</p>
+          )}
           <button
             type="button"
             onClick={() => logout()}

@@ -33,7 +33,8 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
   return (
     <article
-      className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-[#080808] pb-3 shadow-[0_8px_32px_rgba(0,0,0,0.45)] transition-[border-color,box-shadow] duration-300 hover:border-white/[0.12] sm:pb-4"
+      className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-[#1A1718] pb-3 shadow-[0_8px_32px_rgba(0,0,0,0.45)] transition-[border-color,box-shadow] duration-300 hover:border-white/[0.12] sm:pb-4"
+      style={{ boxSizing: 'border-box' }}
     >
       {/* ---- Zone image (ratio fixe, remplissage uniforme) ---- */}
       <div
@@ -93,18 +94,37 @@ const ProductCard = ({ product }: ProductCardProps) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 px-3 pb-2 sm:gap-2 sm:px-4 sm:pb-3 md:gap-2.5">
+      {/* Zone boutons : flex nowrap pour éviter tout débordement sur mobile */}
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'nowrap',
+          gap: '8px',
+          width: '100%',
+          padding: '0 12px 8px',
+          boxSizing: 'border-box',
+        }}
+      >
         {/* Bouton RÉSERVER */}
         <button
           type="button"
           onClick={handleReserver}
           disabled={isUnavailable}
-          className="rounded px-0.5 py-1.5 text-center text-[11px] font-bold uppercase leading-snug tracking-wide transition-transform sm:px-1 sm:py-2 sm:text-xs sm:tracking-wider md:py-2.5 md:text-sm md:leading-normal"
           style={{
+            flex: 1,
+            minWidth: 0,
+            whiteSpace: 'nowrap',
+            fontSize: 'clamp(0.65rem, 2.5vw, 0.8rem)',
+            padding: '10px 4px',
+            textAlign: 'center',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+            borderRadius: '4px',
             background: 'transparent',
-            border: isUnavailable
-              ? '1px solid #444'
-              : '1px solid #9146FF',
+            border: isUnavailable ? '1px solid #444' : '1px solid #9146FF',
             color: isUnavailable ? '#555' : '#9146FF',
             fontFamily: 'Inter, sans-serif',
             cursor: isUnavailable ? 'not-allowed' : 'pointer',
@@ -119,8 +139,19 @@ const ProductCard = ({ product }: ProductCardProps) => {
           type="button"
           onClick={handleCommander}
           disabled={isUnavailable}
-          className="rounded px-0.5 py-1.5 text-center text-[11px] font-bold uppercase leading-snug tracking-wide transition-transform sm:px-1 sm:py-2 sm:text-xs sm:tracking-wider md:py-2.5 md:text-sm md:leading-normal"
           style={{
+            flex: 1,
+            minWidth: 0,
+            whiteSpace: 'nowrap',
+            fontSize: 'clamp(0.65rem, 2.5vw, 0.8rem)',
+            padding: '10px 4px',
+            textAlign: 'center',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+            borderRadius: '4px',
             background: isUnavailable ? '#2A2A2A' : '#FE2C55',
             color: isUnavailable ? '#888' : '#FFFFFF',
             border: 'none',

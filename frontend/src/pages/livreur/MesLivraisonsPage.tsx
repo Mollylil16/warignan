@@ -118,7 +118,12 @@ const MesLivraisonsPage = () => {
               className="rounded-xl border border-white/10 bg-[#111] p-4 sm:p-5"
             >
               <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
-                <p className="font-mono text-sm text-tiktok-cyan">{d.orderRef}</p>
+                <div>
+                  <p className="font-mono text-sm text-tiktok-cyan">{d.orderRef}</p>
+                  {d.numeroSuivi && (
+                    <p className="font-mono text-xs text-neutral-500">Suivi : {d.numeroSuivi}</p>
+                  )}
+                </div>
                 <span
                   className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${statusBadge[d.status] ?? 'bg-white/10 text-neutral-400'}`}
                 >

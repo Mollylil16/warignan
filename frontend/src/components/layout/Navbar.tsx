@@ -12,7 +12,7 @@ const Navbar = () => {
     <header
       className="sticky top-0 z-50 flex h-14 shrink-0 items-center justify-between px-4 sm:h-16 sm:px-6"
       style={{
-        background: '#ffff',
+        background: '#110F10',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
       }}
@@ -20,10 +20,13 @@ const Navbar = () => {
       <div className="flex min-w-0 flex-1 items-center gap-6">
         <Link
           to="/"
-          className="shrink-0 text-2xl sm:text-[28px]"
+          className="shrink-0"
           style={{
-            fontFamily: 'cursive',
-            fontWeight: 900,
+            fontFamily: "'Playfair Display', serif",
+            fontStyle: 'italic',
+            fontWeight: 700,
+            letterSpacing: '0.05em',
+            fontSize: 'clamp(1.4rem, 5vw, 2rem)',
             color: '#BA4F64',
           }}
         >

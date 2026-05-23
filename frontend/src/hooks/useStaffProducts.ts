@@ -12,7 +12,7 @@ export function useStaffProductsList() {
     queryKey: ['products', 'staff', token],
     queryFn: async () => {
       const { data } = await api.get<{ data: StaffProductRow[] }>('/products', {
-        params: { page: 1, limit: STAFF_LIST_LIMIT },
+        params: { page: 1, limit: STAFF_LIST_LIMIT, showAll: 'true' },
       });
       return data.data;
     },

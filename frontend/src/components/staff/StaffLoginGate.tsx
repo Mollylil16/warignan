@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useState, type ReactNode } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuthStore, type AppRole } from '../../store/authStore';
 import { apiErrorMessage } from '../../services/api';
 
@@ -6,9 +7,11 @@ type Props = {
   title: string;
   allowedRoles: AppRole[];
   children: ReactNode;
+  /** Si fourni, redirige vers cette URL au lieu d'afficher le formulaire inline. */
+  loginRedirect?: string;
 };
 
-const StaffLoginGate = ({ title, allowedRoles, children }: Props) => {
+const StaffLoginGate = ({ title, allowedRoles, children, loginRedirect }: Props) => {
   const token = useAuthStore((s) => s.token);
   const user = useAuthStore((s) => s.user);
   const login = useAuthStore((s) => s.login);
@@ -42,6 +45,7 @@ const StaffLoginGate = ({ title, allowedRoles, children }: Props) => {
   };
 
   if (!token) {
+    if (loginRedirect) return <Navigate to={loginRedirect} replace />;
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#070707] px-4 text-white">
         <div className="w-full max-w-sm rounded-xl border border-white/10 bg-[#111] p-6 shadow-xl">

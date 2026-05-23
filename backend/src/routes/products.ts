@@ -11,7 +11,7 @@ import {
   productToDto,
   updateProduct,
 } from '../services/productService.js';
-import { requireAuth, requireRoles } from '../middleware/auth.js';
+import { optionalAuth, requireAuth, requireRoles } from '../middleware/auth.js';
 import { listMeta, paginationQuerySchema } from '../lib/pagination.js';
 import { HttpError } from '../middleware/errorHandler.js';
 
@@ -24,6 +24,7 @@ const listQuerySchema = paginationQuerySchema.extend({
     .enum(['price-asc', 'price-desc', 'popular', 'newest', 'oldest'])
     .optional(),
   q: z.string().optional(),
+  showAll: z.enum(['true', 'false']).optional(),
 });
 
 const createBodySchema = z.object({
@@ -45,10 +46,15 @@ function genProductCode(category: 'robe' | 'crop') {
   return `${prefix}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 }
 
-router.get('/', async (req, res, next) => {
+router.get('/', optionalAuth, async (req, res, next) => {
   try {
     const q = listQuerySchema.parse(req.query);
-    const { items, total, page, limit } = await listProducts(q);
+    // showAll=true autorisé uniquement pour le staff authentifié
+    const role = req.user?.role;
+    const isStaff = role === 'vendeuse' || role === 'admin' || role === 'livreur';
+    const showAll = q.showAll === 'true' && isStaff;
+
+    const { items, total, page, limit } = await listProducts({ ...q, showAll });
     res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
     res.json({ data: items, meta: listMeta(page, limit, total) });
   } catch (e) {

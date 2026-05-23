@@ -16,11 +16,20 @@ const registerSchema = z.object({
   displayName: z.string().min(1).max(120),
 });
 
-const loginSchema = z.object({
+// Mode email : vendeuse, admin, clients
+const loginByEmailSchema = z.object({
   /** E-mail complet ou identifiant court seed (ex. `warignan` → `warignan@warignan.shop`). */
   email: z.string().min(1).max(200),
   password: z.string().min(1),
 });
+
+// Mode nom d'utilisateur : livreurs uniquement
+const loginByUsernameSchema = z.object({
+  username: z.string().min(1).max(120),
+  password: z.string().min(1),
+});
+
+const loginSchema = z.union([loginByUsernameSchema, loginByEmailSchema]);
 
 function resolveLoginEmail(raw: string): string {
   const t = raw.trim().toLowerCase();
@@ -69,6 +78,24 @@ router.post('/register', authLimiter, async (req, res, next) => {
 router.post('/login', authLimiter, async (req, res, next) => {
   try {
     const body = loginSchema.parse(req.body);
+
+    // Mode connexion par nom d'utilisateur (livreurs)
+    if ('username' in body) {
+      const user = await prisma.user.findFirst({
+        where: { displayName: body.username, role: 'livreur' },
+      });
+      if (!user) throw new HttpError(401, 'Identifiants incorrects');
+      const ok = await bcrypt.compare(body.password, user.passwordHash);
+      if (!ok) throw new HttpError(401, 'Identifiants incorrects');
+      const token = signToken(user);
+      // L'email interne @warignan.local n'est jamais retourné
+      return res.json({
+        token,
+        user: { id: user.id, role: user.role, displayName: user.displayName, phone: user.phone ?? null },
+      });
+    }
+
+    // Mode connexion par email (vendeuse, admin, clients)
     const email = resolveLoginEmail(body.email);
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) throw new HttpError(401, 'Identifiants invalides');
@@ -93,10 +120,18 @@ router.get('/me', requireAuth, async (req, res, next) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user!.sub },
-      select: { id: true, email: true, role: true, displayName: true, createdAt: true },
+      select: { id: true, email: true, role: true, displayName: true, phone: true, createdAt: true },
     });
     if (!user) throw new HttpError(404, 'Utilisateur introuvable');
-    res.json(user);
+    res.json({
+      id: user.id,
+      // L'email interne @warignan.local n'est pas exposé pour les livreurs
+      ...(user.role !== 'livreur' ? { email: user.email } : {}),
+      role: user.role,
+      displayName: user.displayName,
+      phone: user.phone ?? null,
+      createdAt: user.createdAt,
+    });
   } catch (e) {
     next(e);
   }

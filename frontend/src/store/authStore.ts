@@ -6,15 +6,18 @@ export type AppRole = 'client' | 'vendeuse' | 'admin' | 'livreur';
 
 export type UserBrief = {
   id: string;
-  email: string;
+  /** Non présent pour les livreurs (email interne jamais exposé). */
+  email?: string;
   role: AppRole;
   displayName: string;
+  phone?: string | null;
 };
 
 interface AuthState {
   token: string | null;
   user: UserBrief | null;
   login: (email: string, password: string) => Promise<UserBrief>;
+  loginByUsername: (username: string, password: string) => Promise<UserBrief>;
   logout: () => void;
   fetchMe: () => Promise<UserBrief | null>;
 }
@@ -28,6 +31,15 @@ export const useAuthStore = create<AuthState>()(
       login: async (email, password) => {
         const { data } = await api.post<{ token: string; user: UserBrief }>('/auth/login', {
           email,
+          password,
+        });
+        set({ token: data.token, user: data.user });
+        return data.user;
+      },
+
+      loginByUsername: async (username, password) => {
+        const { data } = await api.post<{ token: string; user: UserBrief }>('/auth/login', {
+          username,
           password,
         });
         set({ token: data.token, user: data.user });

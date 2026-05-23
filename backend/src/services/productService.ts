@@ -8,6 +8,8 @@ export type ListProductsQuery = {
   q?: string;
   page?: number;
   limit?: number;
+  /** Si true, inclut les produits "sold" (réservé à la vendeuse/admin). */
+  showAll?: boolean;
 };
 
 function asStringArray(json: unknown): string[] {
@@ -47,6 +49,11 @@ export function productToDto(p: {
 
 export async function listProducts(query: ListProductsQuery) {
   const where: Prisma.ProductWhereInput = {};
+
+  // Les clientes ne voient pas les articles épuisés
+  if (!query.showAll) {
+    where.status = { in: ['disponible', 'reserver'] };
+  }
 
   if (query.category && query.category !== 'ALL') {
     const map: Record<string, ProductCategory> = {

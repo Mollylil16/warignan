@@ -46,6 +46,27 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
   }
 }
 
+/** Décode le JWT si présent — ne bloque pas les requêtes anonymes. */
+export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
+  const h = req.headers.authorization;
+  if (h?.startsWith('Bearer ')) {
+    const token = h.slice(7);
+    try {
+      const decoded = jwt.verify(token, env.JWT_SECRET) as LibJwtPayload & { role?: Role };
+      if (
+        typeof decoded.sub === 'string' &&
+        typeof decoded.email === 'string' &&
+        decoded.role !== undefined
+      ) {
+        req.user = { sub: decoded.sub, email: decoded.email, role: decoded.role };
+      }
+    } catch {
+      // token invalide ignoré
+    }
+  }
+  next();
+}
+
 export function requireRoles(...roles: Role[]) {
   return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) {
