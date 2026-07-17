@@ -1,5 +1,5 @@
 // Numéro WhatsApp Warignan — modifier ici si besoin (format international sans espaces ni +)
-const WHATSAPP_NUMBER = import.meta.env.VITE_WHATSAPP_NUMBER ?? '2250700000000';
+const WHATSAPP_NUMBER = import.meta.env.VITE_WHATSAPP_NUMBER ?? '2250788608689';
 
 const WhatsAppButton = () => (
   <a

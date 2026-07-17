@@ -42,7 +42,7 @@ const Footer = () => {
                 </svg>
               </a>
               <a
-                href="https://wa.me/2250700000000"
+                href="https://wa.me/2250788608689"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="rounded-full bg-white/5 p-2 transition hover:bg-white/10 hover:text-white"
@@ -69,7 +69,7 @@ const Footer = () => {
               </li>
               <li>
                 <a
-                  href="https://wa.me/2250700000000"
+                  href="https://wa.me/2250788608689"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="transition hover:text-white"
