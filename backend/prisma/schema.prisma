@@ -1,7 +1,8 @@
 // Schéma Warignan — ~70 % exploité côté routes ; le reste est pour l’exercice junior.
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
