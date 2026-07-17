@@ -20,8 +20,12 @@ cloudinary.config({
 });
 
 const uploadRoot = path.resolve(env.UPLOAD_DIR);
-if (!fs.existsSync(uploadRoot)) {
-  fs.mkdirSync(uploadRoot, { recursive: true });
+try {
+  if (!fs.existsSync(uploadRoot)) {
+    fs.mkdirSync(uploadRoot, { recursive: true });
+  }
+} catch (err) {
+  console.warn("Impossible de créer le dossier d'upload local:", err);
 }
 
 const storage = multer.diskStorage({

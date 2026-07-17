@@ -8,7 +8,7 @@ export const env = {
   DATABASE_URL: process.env.DATABASE_URL ?? 'file:./dev.db',
   JWT_SECRET: process.env.JWT_SECRET ?? 'dev-secret-change-in-production',
   CORS_ORIGIN: process.env.CORS_ORIGIN ?? 'http://localhost:3000',
-  UPLOAD_DIR: process.env.UPLOAD_DIR ?? './uploads',
+  UPLOAD_DIR: process.env.UPLOAD_DIR ?? (process.env.VERCEL ? '/tmp' : './uploads'),
   WAVE_WEBHOOK_SECRET: process.env.WAVE_WEBHOOK_SECRET ?? '',
   ORANGE_MONEY_WEBHOOK_SECRET: process.env.ORANGE_MONEY_WEBHOOK_SECRET ?? '',
   GENIUSPAY_WEBHOOK_SECRET: process.env.GENIUSPAY_WEBHOOK_SECRET ?? '',
