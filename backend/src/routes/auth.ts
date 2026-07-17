@@ -99,7 +99,7 @@ router.post('/login', authLimiter, async (req, res, next) => {
     }
 
     // Mode connexion par email (vendeuse, admin, clients)
-    const email = resolveLoginEmail(body.email);
+    const email = resolveLoginEmail((body as any).email);
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) throw new HttpError(401, 'Identifiants invalides');
     const ok = await bcrypt.compare(body.password, user.passwordHash);

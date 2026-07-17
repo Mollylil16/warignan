@@ -62,8 +62,10 @@ router.post('/wave', rawBodyParser, async (req, res, next) => {
     }
     const body = paymentBodySchema.parse(json);
     await recordPaymentEvent({
-      ...body,
       reference: body.reference,
+      flow: body.flow,
+      amountFcfa: body.amountFcfa,
+      status: body.status,
       provider: body.provider ?? 'wave',
       payload: json as Prisma.InputJsonValue,
     });
@@ -94,8 +96,10 @@ router.post('/orange-money', rawBodyParser, async (req, res, next) => {
     }
     const body = paymentBodySchema.parse(json);
     await recordPaymentEvent({
-      ...body,
       reference: body.reference,
+      flow: body.flow,
+      amountFcfa: body.amountFcfa,
+      status: body.status,
       provider: body.provider ?? 'orange',
       payload: json as Prisma.InputJsonValue,
     });
