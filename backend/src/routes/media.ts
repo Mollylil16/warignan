@@ -4,6 +4,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import sharp from 'sharp';
 import { z } from 'zod';
+import { v2 as cloudinary } from 'cloudinary';
 import { env } from '../config/env.js';
 import { prisma } from '../lib/prisma.js';
 import { listMeta, paginationQuerySchema, resolvePagination } from '../lib/pagination.js';
@@ -11,6 +12,12 @@ import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { HttpError } from '../middleware/errorHandler.js';
 
 const router = Router();
+
+cloudinary.config({
+  cloud_name: env.CLOUDINARY_CLOUD_NAME,
+  api_key: env.CLOUDINARY_API_KEY,
+  api_secret: env.CLOUDINARY_API_SECRET,
+});
 
 const uploadRoot = path.resolve(env.UPLOAD_DIR);
 if (!fs.existsSync(uploadRoot)) {
@@ -69,6 +76,8 @@ router.post(
     });
   },
   async (req, res, next) => {
+    const useCloudinary = !!(env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET);
+    let absPath: string | null = null;
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'Fichier manquant (champ form « file »)' });
@@ -82,14 +91,30 @@ router.post(
         })
         .parse(req.body);
 
-      const absPath = path.join(uploadRoot, req.file.filename);
+      absPath = path.join(uploadRoot, req.file.filename);
       await maybeResizeImage(absPath);
 
-      const publicUrl = `/uploads/${req.file.filename}`;
+      let publicUrl = `/uploads/${req.file.filename}`;
+      let publicIdOrFilename = req.file.filename;
+
+      if (useCloudinary) {
+        try {
+          const result = await cloudinary.uploader.upload(absPath, {
+            folder: 'warignan',
+            use_filename: true,
+            unique_filename: false,
+          });
+          publicUrl = result.secure_url;
+          publicIdOrFilename = result.public_id;
+        } catch (err) {
+          throw new HttpError(500, "Erreur lors de l'upload Cloudinary");
+        }
+      }
+
       const asset = await prisma.mediaAsset.create({
         data: {
           url: publicUrl,
-          filename: req.file.originalname,
+          filename: publicIdOrFilename,
           gallery: meta.gallery ?? 'uncategorized',
           isPrimary: meta.isPrimary ?? false,
         },
@@ -97,6 +122,14 @@ router.post(
       res.status(201).json(asset);
     } catch (e) {
       next(e);
+    } finally {
+      if (useCloudinary && absPath && fs.existsSync(absPath)) {
+        try {
+          fs.unlinkSync(absPath);
+        } catch {
+          // Ignore cleanup error
+        }
+      }
     }
   }
 );
@@ -123,14 +156,27 @@ router.delete(
     try {
       const asset = await prisma.mediaAsset.findUnique({ where: { id: req.params.id } });
       if (!asset) throw new HttpError(404, 'Média introuvable');
-      const diskPath = diskPathFromPublicUrl(asset.url);
-      if (diskPath && fs.existsSync(diskPath)) {
-        try {
-          fs.unlinkSync(diskPath);
-        } catch {
-          /* fichier déjà absent */
+      
+      if (asset.url.includes('cloudinary.com')) {
+        const useCloudinary = !!(env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET);
+        if (useCloudinary) {
+          try {
+            await cloudinary.uploader.destroy(asset.filename);
+          } catch {
+            // Ignore failure to delete from cloud, still remove from DB
+          }
+        }
+      } else {
+        const diskPath = diskPathFromPublicUrl(asset.url);
+        if (diskPath && fs.existsSync(diskPath)) {
+          try {
+            fs.unlinkSync(diskPath);
+          } catch {
+            /* fichier déjà absent */
+          }
         }
       }
+
       await prisma.mediaAsset.delete({ where: { id: asset.id } });
       res.status(204).send();
     } catch (e) {
@@ -140,3 +186,4 @@ router.delete(
 );
 
 export default router;
+

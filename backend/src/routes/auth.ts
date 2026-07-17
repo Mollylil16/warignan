@@ -12,7 +12,10 @@ const router = Router();
 
 const registerSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(6),
+  password: z.string()
+    .min(8, 'Le mot de passe doit contenir au moins 8 caractères')
+    .regex(/[A-Z]/, 'Le mot de passe doit contenir au moins une lettre majuscule')
+    .regex(/[0-9]/, 'Le mot de passe doit contenir au moins un chiffre'),
   displayName: z.string().min(1).max(120),
 });
 

@@ -118,9 +118,11 @@ const SuiviCommandePage = () => {
       )}
 
       {submitted?.trim() && isPending && (
-        <p className="rounded-lg border border-white/10 bg-[#111] p-4 text-sm text-neutral-400">
-          Chargement…
-        </p>
+        <div className="rounded-lg border border-white/10 bg-[#111] p-5 space-y-3">
+          <div className="h-4 w-1/3 shimmer-loader rounded" />
+          <div className="h-3 w-2/3 shimmer-loader rounded" />
+          <div className="h-3 w-1/2 shimmer-loader rounded" />
+        </div>
       )}
 
       {result?.kind === 'empty' && (

@@ -11,6 +11,20 @@ export type VendeuseTodoItem = {
   priority: number;
 };
 
+export type PeriodSales = {
+  confirmedFcfa: number;
+  expectedFcfa: number;
+  ordersCount: number;
+};
+
+export type TopSellerItem = {
+  code: string;
+  qty: number;
+  nom: string;
+  prix: number;
+  image: string;
+};
+
 export type VendeuseOverview = {
   kpi: {
     orders: {
@@ -34,6 +48,17 @@ export type VendeuseOverview = {
       };
       anomaliesLast7d: number;
     };
+    sales: {
+      today: PeriodSales;
+      week: PeriodSales;
+      month: PeriodSales;
+    };
+    inventory: {
+      disponible: number;
+      reserver: number;
+      sold: number;
+    };
+    topSellers: TopSellerItem[];
   };
   todo: VendeuseTodoItem[];
 };
@@ -51,4 +76,3 @@ export function useVendeuseOverview() {
     refetchIntervalInBackground: false,
   });
 }
-

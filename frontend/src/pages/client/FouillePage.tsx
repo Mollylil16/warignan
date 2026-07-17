@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { productFilters, ProductCategory } from '../../types';
 import { useProducts } from '../../hooks/useProducts';
 import { Search } from 'lucide-react';
-import FilterBar from '../../components/shared/StatusBadge';
+import FilterBar from '../../components/shared/FilterBar';
 import ProductCard from '../../components/shared/ProductCard';
 
 const FouillePage = () => {
@@ -92,9 +92,36 @@ const FouillePage = () => {
 
   if (isLoading) {
     return (
-      <main className="mx-auto max-w-6xl px-4 py-20 text-center text-neutral-400">
-        Chargement du catalogue…
-      </main>
+      <div className="mx-auto max-w-7xl px-3 py-8 sm:px-4 lg:px-6">
+        {/* Header/Title Skeleton */}
+        <div className="mb-6 h-6 w-48 shimmer-loader rounded bg-white/5" />
+        
+        {/* Skeleton Grid */}
+        <main className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 md:gap-5">
+          {Array.from({ length: 8 }).map((_, idx) => (
+            <article
+              key={idx}
+              className="relative overflow-hidden rounded-xl border border-white/[0.05] bg-[#1A1718] pb-4 shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
+            >
+              {/* Image Area Aspect Ratio 3:4 */}
+              <div className="aspect-[3/4] w-full shimmer-loader bg-white/5" />
+              
+              {/* Text & Price lines */}
+              <div className="px-3 pt-3.5 space-y-2 sm:px-4">
+                <div className="h-4 w-3/4 shimmer-loader rounded bg-white/10" />
+                <div className="h-3 w-1/2 shimmer-loader rounded bg-white/5" />
+                <div className="h-6 w-2/5 shimmer-loader rounded bg-white/10 mt-3" />
+              </div>
+              
+              {/* Buttons placeholders */}
+              <div className="flex gap-2 px-3 pt-4 sm:px-4">
+                <div className="h-9 flex-1 shimmer-loader rounded bg-white/5" />
+                <div className="h-9 flex-1 shimmer-loader rounded bg-white/5" />
+              </div>
+            </article>
+          ))}
+        </main>
+      </div>
     );
   }
 
@@ -130,7 +157,7 @@ const FouillePage = () => {
         onSearchChange={setSearchQuery}
       />
 
-      <div className="mx-auto max-w-6xl px-3 pt-3 sm:px-4 lg:px-6">
+      <div className="mx-auto max-w-7xl px-3 pt-3 sm:px-4 lg:px-6">
         <p className="text-xs text-neutral-500">
           <span className="font-semibold text-neutral-400">{filteredProducts.length}</span> pièce
           {filteredProducts.length > 1 ? 's' : ''}
@@ -140,7 +167,7 @@ const FouillePage = () => {
 
       <main
         id="feed"
-        className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-3 bg-[#050505] px-3 pb-8 sm:gap-4 sm:px-4 sm:pb-10 md:grid-cols-3 md:gap-5 lg:px-6"
+        className="mx-auto grid w-full max-w-7xl grid-cols-2 gap-3 bg-[#050505] px-3 pb-8 sm:gap-4 sm:px-4 sm:pb-10 md:grid-cols-3 lg:grid-cols-4 md:gap-5 lg:px-6"
       >
         {/* Si aucun produit ne correspond aux filtres */}
         {filteredProducts.length === 0 ? (
@@ -156,9 +183,9 @@ const FouillePage = () => {
             <p>Aucun produit trouvé pour ces filtres</p>
           </div>
         ) : (
-          filteredProducts.map((product) => (
+          filteredProducts.map((product, index) => (
             <div key={product.id} className="min-w-0">
-              <ProductCard product={product} />
+              <ProductCard product={product} index={index} />
             </div>
           ))
         )}

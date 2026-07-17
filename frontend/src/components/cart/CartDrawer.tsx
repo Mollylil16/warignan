@@ -40,6 +40,7 @@ const LineRow = ({
             src={line.imageUrl}
             alt=""
             className="h-full w-full bg-black/20 object-contain object-center"
+            loading="lazy"
           />
         ) : (
           <div className="flex h-full items-center justify-center text-[10px] text-neutral-600">
@@ -213,27 +214,30 @@ const CartDrawer = () => {
     navigate('/paiement/commande');
   };
 
-  if (!mounted || !open) return null;
+  if (!mounted) return null;
 
   const drawer = (
     <div
-      className="pointer-events-none fixed inset-0 z-[200] isolate flex justify-end"
+      className={`fixed inset-0 z-[200] flex justify-end transition-opacity duration-300 ${
+        open ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+      }`}
       role="presentation"
     >
-      {/*
-        Pas de backdrop-blur ici : sur certains navigateurs le calque plein écran + blur
-        se retrouve au-dessus du tiroir et floute tout le panier (incluant les boutons).
-        Fond assombri uniquement, z-index explicites pour garder le panier net au premier plan.
-      */}
+      {/* Clicking the backdrop overlay closes the cart drawer */}
       <div
-        className="pointer-events-none absolute inset-0 z-0 bg-black/50"
+        className={`absolute inset-0 z-0 bg-black/50 transition-opacity duration-300 ${
+          open ? 'opacity-100' : 'opacity-0'
+        }`}
+        onClick={closeCart}
         aria-hidden
       />
 
       <aside
-        className="relative z-10 flex h-[100dvh] max-h-[100dvh] w-full max-w-md flex-col overflow-hidden border-l border-white/10 bg-[#0a0a0a] shadow-2xl pointer-events-auto"
+        className={`relative z-10 flex h-[100dvh] max-h-[100dvh] w-full max-w-md flex-col overflow-hidden border-l border-white/10 bg-[#0a0a0a] shadow-2xl pointer-events-auto transition-transform duration-500 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] motion-reduce:transition-none ${
+          open ? 'translate-x-0' : 'translate-x-full'
+        }`}
         role="dialog"
-        aria-modal="false"
+        aria-modal="true"
         aria-labelledby="cart-title"
       >
         <header className="shrink-0 border-b border-white/10 px-4 py-3 sm:py-4">
@@ -298,6 +302,34 @@ const CartDrawer = () => {
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col">
+          {/* Progression Livraison Gratuite */}
+          {lines.length > 0 && (
+            <div className="shrink-0 border-b border-white/5 bg-[#141213] px-4 py-3">
+              <div className="flex items-center justify-between text-xs font-bold text-neutral-300 font-inter">
+                {sub >= 25000 ? (
+                  <span className="text-status-green flex items-center gap-1.5 animate-pulse">
+                    🎉 Livraison gratuite Abidjan débloquée !
+                  </span>
+                ) : (
+                  <span>
+                    Plus que <strong className="text-tiktok-cyan">{formatPrice(25000 - sub)}</strong> pour la livraison gratuite à Abidjan !
+                  </span>
+                )}
+                <span className="text-[10px] text-neutral-500 font-normal">Seuil: 25 000 F</span>
+              </div>
+              <div className="mt-2 h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ease-out ${
+                    sub >= 25000
+                      ? 'bg-gradient-to-r from-status-green to-tiktok-cyan shadow-[0_0_10px_rgba(0,255,85,0.3)]'
+                      : 'bg-tiktok-pink'
+                  }`}
+                  style={{ width: `${Math.min(100, (sub / 25000) * 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
+
           {lines.length === 0 ? (
             <div className="flex min-h-[40vh] flex-col items-center justify-center px-6 text-center text-neutral-500">
               <p className="text-sm">

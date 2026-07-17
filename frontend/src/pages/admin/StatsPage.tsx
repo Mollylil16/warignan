@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Package, TrendingUp, Users, UserCheck } from 'lucide-react';
+import { Package, TrendingUp, Users, UserCheck, Layers, ShoppingBag } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { formatPrice } from '../../utils/formatPrice';
@@ -12,6 +12,13 @@ type AdminStats = {
   reservationsByWorkflow: Record<string, number>;
   trendCa7d: { date: string; amount: number }[];
   usersByRole: Record<string, number>;
+  sales: {
+    today: { confirmedFcfa: number; expectedFcfa: number; ordersCount: number };
+    week: { confirmedFcfa: number; expectedFcfa: number; ordersCount: number };
+    month: { confirmedFcfa: number; expectedFcfa: number; ordersCount: number };
+  };
+  inventory: { disponible: number; reserver: number; sold: number };
+  topSellers: Array<{ code: string; qty: number; nom: string; prix: number; image: string }>;
 };
 
 const stepLabel: Record<string, string> = {
@@ -75,8 +82,8 @@ const StatsPage = () => {
 
   return (
     <div className="max-w-5xl">
-      <h1 className="mb-1 text-2xl font-bold text-white">Tableau de bord</h1>
-      <p className="mb-8 text-sm text-neutral-500">Données en temps réel — rafraîchissement auto 60s.</p>
+      <h1 className="mb-1 text-2xl font-bold text-white">Tableau de bord Admin</h1>
+      <p className="mb-8 text-sm text-neutral-500">Données financières et statistiques du site — rafraîchissement auto 60s.</p>
 
       {error && (
         <p className="mb-6 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
@@ -98,7 +105,7 @@ const StatsPage = () => {
 
       {data && (
         <>
-          {/* KPIs financiers */}
+          {/* KPIs financiers globaux */}
           <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-xl border border-tiktok-cyan/20 bg-tiktok-cyan/5 p-5">
               <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-tiktok-cyan">
@@ -135,6 +142,132 @@ const StatsPage = () => {
               <p className="mt-1 text-xs text-neutral-500">
                 {data.reservationsByWorkflow.awaiting_validation ?? 0} à valider
               </p>
+            </div>
+          </div>
+
+          {/* ── CHIFFRES D'AFFAIRES & VENTES (DÉTAILLÉS) ── */}
+          <div className="mb-8">
+            <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-neutral-400">Performance Chiffre d'Affaires</h2>
+            <div className="grid gap-4 md:grid-cols-3">
+              {/* Aujourd'hui */}
+              <div className="rounded-xl border border-white/10 bg-[#111] p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-neutral-400">Aujourd'hui</span>
+                  <span className="rounded bg-tiktok-pink/15 px-2 py-0.5 text-[10px] font-bold text-tiktok-pink">
+                    {data.sales.today.ordersCount} cmd
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs text-neutral-500">Confirmé : <strong className="text-white">{formatPrice(data.sales.today.confirmedFcfa)}</strong></p>
+                  <p className="text-xs text-neutral-500 mt-1">Attendu : <strong className="text-neutral-300">{formatPrice(data.sales.today.expectedFcfa)}</strong></p>
+                </div>
+              </div>
+
+              {/* Cette Semaine */}
+              <div className="rounded-xl border border-white/10 bg-[#111] p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-neutral-400">Cette Semaine</span>
+                  <span className="rounded bg-tiktok-cyan/15 px-2 py-0.5 text-[10px] font-bold text-tiktok-cyan">
+                    {data.sales.week.ordersCount} cmd
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs text-neutral-500">Confirmé : <strong className="text-white">{formatPrice(data.sales.week.confirmedFcfa)}</strong></p>
+                  <p className="text-xs text-neutral-500 mt-1">Attendu : <strong className="text-neutral-300">{formatPrice(data.sales.week.expectedFcfa)}</strong></p>
+                </div>
+              </div>
+
+              {/* Ce Mois */}
+              <div className="rounded-xl border border-white/10 bg-[#111] p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-neutral-400">Ce Mois</span>
+                  <span className="rounded bg-reserve-purple/15 px-2 py-0.5 text-[10px] font-bold text-reserve-purple">
+                    {data.sales.month.ordersCount} cmd
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs text-neutral-500">Confirmé : <strong className="text-white">{formatPrice(data.sales.month.confirmedFcfa)}</strong></p>
+                  <p className="text-xs text-neutral-500 mt-1">Attendu : <strong className="text-neutral-300">{formatPrice(data.sales.month.expectedFcfa)}</strong></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── STOCKS & MEILLEURES VENTES ── */}
+          <div className="mb-8 grid gap-4 md:grid-cols-2">
+            {/* Stocks */}
+            <div className="rounded-xl border border-white/10 bg-[#111] p-5 space-y-4">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                <Layers className="h-4 w-4 text-tiktok-cyan" />
+                Stocks de la boutique
+              </h3>
+              
+              <div className="space-y-3 pt-2">
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-neutral-400">Disponibles</span>
+                    <span className="font-extrabold text-status-green">{data.inventory.disponible} pièces</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-white/5 overflow-hidden">
+                    <div className="h-full bg-status-green rounded-full" style={{ width: `${Math.min(100, (data.inventory.disponible / (data.inventory.disponible + data.inventory.reserver + data.inventory.sold || 1)) * 100)}%` }} />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-neutral-400">Réservés</span>
+                    <span className="font-extrabold text-reserve-purple">{data.inventory.reserver} pièces</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-white/5 overflow-hidden">
+                    <div className="h-full bg-reserve-purple rounded-full" style={{ width: `${Math.min(100, (data.inventory.reserver / (data.inventory.disponible + data.inventory.reserver + data.inventory.sold || 1)) * 100)}%` }} />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-neutral-400">Vendus</span>
+                    <span className="font-extrabold text-neutral-400">{data.inventory.sold} pièces</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-white/5 overflow-hidden">
+                    <div className="h-full bg-neutral-600 rounded-full" style={{ width: `${Math.min(100, (data.inventory.sold / (data.inventory.disponible + data.inventory.reserver + data.inventory.sold || 1)) * 100)}%` }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Meilleures Ventes */}
+            <div className="rounded-xl border border-white/10 bg-[#111] p-5 space-y-4">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                <ShoppingBag className="h-4 w-4 text-tiktok-pink" />
+                Meilleures Ventes (30j)
+              </h3>
+              
+              {data.topSellers.length === 0 ? (
+                <p className="text-xs text-neutral-500 pt-4">Aucune vente récente.</p>
+              ) : (
+                <div className="divide-y divide-white/5 space-y-2.5">
+                  {data.topSellers.map((seller) => (
+                    <div key={seller.code} className="flex items-center gap-3 pt-2.5 first:pt-0">
+                      <div className="h-10 w-8 shrink-0 overflow-hidden rounded bg-[#1a1a1a]">
+                        {seller.image ? (
+                          <img src={seller.image} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="h-full w-full bg-neutral-800" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-white truncate">{seller.nom}</p>
+                        <p className="text-[10px] text-neutral-500 font-mono">{seller.code} — {formatPrice(seller.prix)}</p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <span className="inline-block rounded-full bg-tiktok-pink/10 border border-tiktok-pink/20 px-2.5 py-0.5 text-xs font-bold text-tiktok-pink">
+                          {seller.qty} vendus
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

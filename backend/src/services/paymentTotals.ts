@@ -2,7 +2,7 @@ import { logger } from '../lib/logger.js';
 import { prisma } from '../lib/prisma.js';
 
 /** Analyse "CR-ABC ×2, RB-XYZ ×1" → [{ code, qty }] */
-function parseItemsSummary(summary: string): Array<{ code: string; qty: number }> {
+export function parseItemsSummary(summary: string): Array<{ code: string; qty: number }> {
   return summary
     .split(',')
     .map((part) => part.trim())

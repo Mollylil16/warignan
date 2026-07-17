@@ -4,50 +4,26 @@ API REST pour la boutique Warignan — environ **70 %** des fonctionnalités pr�
 
 > **Note :** le dossier `src/modules/` (NestJS / TypeORM) est un ancien squelette **non utilisé** par cette API. Seuls les fichiers listés dans `tsconfig.json` sont compilés (Express + Prisma). Tu peux supprimer `src/modules/`, `src/server.ts`, `src/main.ts`, etc. quand tu veux nettoyer le repo.
 
----
+## Fonctionnalités principales
 
-## À faire (collaborateur) — lire en priorité
+L'API est aujourd'hui fonctionnelle et couvre la majorité des besoins e-commerce :
 
-Cette section est **dupliquée à la racine** dans `../README.md` pour que toute l’équipe la voie. Détail et pistes : `docs/EXERCICE_JUNIOR_BACKEND.md`.
+1. **Livraisons**
+   - API complète (`GET`, `POST`, `PATCH`) avec filtres par statut et date.
+   - Les rôles sont protégés (vendeuse, admin, livreur assigné).
 
-### 1. Livraisons
+2. **Réservations**
+   - Gestion stricte des transitions de workflow.
+   - L'acompte (souvent 30%) est vérifié avant toute validation.
 
-- Aujourd’hui : `GET /api/deliveries` répond **501** (non implémenté).
-- Le modèle Prisma **`Delivery`** existe ; la table est vide après le seed (comptes uniquement), mais **aucune API livraisons complète** pour l’instant.
-- **À faire :** liste + filtres (statut, date), `PATCH` pour `courierId` / `status`, routes protégées (**vendeuse** / **admin**, éventuellement **livreur** « mes livraisons »).
+3. **Webhooks paiement**
+   - Les endpoints Wave et Orange Money vérifient rigoureusement les signatures HMAC.
 
-### 2. Réservations
+4. **Pagination**
+   - Implémentée sur les listes (produits, commandes) pour des meilleures performances.
 
-- Aujourd’hui : **`GET /api/reservations`** seulement.
-- **À faire :** `PATCH /api/reservations/:id` pour `workflow` et/ou `depositStatus`, avec **règles métier** sur les transitions (ex. pas de passage incohérent `cancelled` → `validated`).
-
-### 3. Webhooks paiement (Wave / Orange Money)
-
-- Les routes enregistrent un JSON simplifié **sans vérifier la signature**.
-- **À faire :** lire la doc du fournisseur, valider la signature avec `WAVE_WEBHOOK_SECRET` / `ORANGE_MONEY_WEBHOOK_SECRET`, refuser en prod si invalide ; éventuellement **body brut** (`express.raw`) si exigé.
-
-### 4. Pagination et perf
-
-- Listes (produits, commandes, etc.) sans **`page` / `limit`** (ni curseur).
-- **À faire :** pagination + éventuellement `select` Prisma pour alléger les réponses.
-
-### 5. Médias
-
-- Upload **disque local** uniquement.
-- **À faire :** suppression du fichier si suppression en base, resize (ex. **sharp**), stockage **S3** / Cloudinary, etc.
-
-### 6. Qualité / prod
-
-- **Tests** automatisés (auth, `trackingService`, …).
-- **Env** strict en prod (`JWT_SECRET` fort, secrets webhooks obligatoires).
-- **PostgreSQL** au lieu de SQLite pour la prod.
-
-### Critères de validation suggérés
-
-- [ ] Au moins une route **livraisons** utile + **auth**.
-- [ ] Au moins une **transition** de réservation gérée côté API.
-- [ ] Une **tentative de vérif webhook** documentée (même en mock).
-- [ ] **README** (racine et/ou ce fichier) mis à jour avec ce qui a été ajouté.
+5. **Médias**
+   - Upload de fichiers, redimensionnement via Sharp, et intégration Cloudinary.
 
 ---
 

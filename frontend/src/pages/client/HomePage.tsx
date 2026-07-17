@@ -7,9 +7,18 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useLiveStatus } from '../../hooks/useLiveStatus';
+import { useProducts } from '../../hooks/useProducts';
+import ProductCard from '../../components/shared/ProductCard';
+import CanvasParticles from '../../components/shared/CanvasParticles';
 
 const HomePage = () => {
   const isLive = useLiveStatus();
+  const { data: products } = useProducts();
+
+  // Filter featured products or fallback to first 4 products
+  const featured = products.filter((p) => p.featured).slice(0, 4);
+  const displayProducts = featured.length > 0 ? featured : products.slice(0, 4);
+
   return (
     <div className="relative overflow-hidden bg-bg-void">
       {/* Fond décoratif discret */}
@@ -21,6 +30,7 @@ const HomePage = () => {
             'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(186, 79, 100, 0.35), transparent 55%), radial-gradient(ellipse 60% 40% at 100% 50%, rgba(145, 70, 255, 0.12), transparent 50%), radial-gradient(ellipse 50% 40% at 0% 80%, rgba(37, 244, 238, 0.08), transparent 45%)',
         }}
       />
+      <CanvasParticles />
 
       {/* --- Hero plein écran (sous la navbar) --- */}
       <section className="relative mx-auto flex min-h-[calc(100dvh-3.5rem)] max-w-4xl flex-col justify-center px-4 pb-16 pt-8 text-center sm:min-h-[calc(100dvh-4rem)] sm:px-6 sm:pb-20 sm:pt-10 md:max-w-5xl md:px-8">
@@ -81,6 +91,32 @@ const HomePage = () => {
           </p>
         </div>
       </section>
+
+      {/* --- Section Pépites / Coups de cœur --- */}
+      {displayProducts.length > 0 && (
+        <section className="relative mx-auto max-w-6xl px-4 pb-16 sm:px-6 md:px-8 border-t border-white/[0.04] pt-12">
+          <div className="mb-8 flex items-center justify-between">
+            <h2
+              className="text-lg font-bold uppercase tracking-wider text-white sm:text-xl"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              🔥 Les pépites du moment
+            </h2>
+            <Link
+              to="/fouille"
+              className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-tiktok-pink hover:underline"
+            >
+              Voir tout le catalogue <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 md:gap-5">
+            {displayProducts.map((product, index) => (
+              <ProductCard key={product.id} product={product} index={index} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* --- Bloc argumentaire --- */}
       <section
@@ -145,20 +181,6 @@ const HomePage = () => {
           Entrer dans la fouille
           <ArrowRight className="h-4 w-4 shrink-0" strokeWidth={2.5} aria-hidden />
         </Link>
-        <p className="mt-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-neutral-600">
-          <Link to="/suivi" className="underline-offset-2 hover:text-neutral-500 hover:underline">
-            Suivi commande
-          </Link>
-          <Link to="/vendeuse" className="underline-offset-2 hover:text-neutral-500 hover:underline">
-            Espace vendeuse
-          </Link>
-          <Link to="/admin" className="underline-offset-2 hover:text-neutral-500 hover:underline">
-            Admin
-          </Link>
-          <Link to="/livreur" className="underline-offset-2 hover:text-neutral-500 hover:underline">
-            Livreur
-          </Link>
-        </p>
       </section>
     </div>
   );

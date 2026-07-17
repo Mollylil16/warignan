@@ -9,6 +9,9 @@ import {
   ShieldAlert,
   Truck,
   UserCheck,
+  TrendingUp,
+  ShoppingBag,
+  Layers,
 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import StatCard from '../../components/vendeuse/StatCard';
@@ -51,8 +54,6 @@ const VendeuseDashboardPage = () => {
   const prepOrders =
     (overview?.kpi.orders.preparation ?? 0) + (overview?.kpi.orders.emballage ?? 0);
   const shippedToday = overview?.kpi.orders.shippedToday ?? 0;
-  const payments24hAmount = overview?.kpi.payments.last24h.amountFcfaConfirmed ?? 0;
-  const payments24hFailed = overview?.kpi.payments.last24h.failedCount ?? 0;
   const anomalies7d = overview?.kpi.payments.anomaliesLast7d ?? 0;
 
   const shortcuts = [
@@ -69,8 +70,8 @@ const VendeuseDashboardPage = () => {
   return (
     <div className="max-w-6xl">
       <PageHeader
-        title="Tableau de bord"
-        description="Vue synthétique alimentée par l'API."
+        title="Tableau de bord Vendeuse"
+        description="Statistiques financières, gestion de stock et pépites les plus vendues."
       />
 
       {/* ── LIVE Toggle ── */}
@@ -132,7 +133,8 @@ const VendeuseDashboardPage = () => {
 
       {overview && (
         <>
-          <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {/* ── KPI CLASSIQUES ── */}
+          <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
               label="À valider (acompte reçu)"
               value={awaitingValidation}
@@ -163,15 +165,162 @@ const VendeuseDashboardPage = () => {
             />
           </div>
 
+          {/* ── CHIFFRES D'AFFAIRES & VENTES ── */}
+          <div className="mb-8">
+            <h2 className="mb-4 text-lg font-bold text-white flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-tiktok-pink" />
+              Chiffre d'Affaires & Ventes
+            </h2>
+            <div className="grid gap-4 md:grid-cols-3">
+              {/* Aujourd'hui */}
+              <div className="rounded-xl border border-white/10 bg-[#111] p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-neutral-400">Aujourd'hui</span>
+                  <span className="rounded bg-tiktok-pink/15 px-2 py-0.5 text-[10px] font-bold text-tiktok-pink">
+                    {overview.kpi.sales.today.ordersCount} commande{overview.kpi.sales.today.ordersCount > 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs text-neutral-500">Revenu réel (confirmé)</p>
+                  <p className="text-2xl font-black text-white">{formatPrice(overview.kpi.sales.today.confirmedFcfa)}</p>
+                </div>
+                <div className="border-t border-white/5 pt-2 flex justify-between text-xs text-neutral-400">
+                  <span>CA attendu :</span>
+                  <span className="font-semibold text-white">{formatPrice(overview.kpi.sales.today.expectedFcfa)}</span>
+                </div>
+              </div>
+
+              {/* Cette Semaine */}
+              <div className="rounded-xl border border-white/10 bg-[#111] p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-neutral-400">Cette Semaine</span>
+                  <span className="rounded bg-tiktok-cyan/15 px-2 py-0.5 text-[10px] font-bold text-tiktok-cyan">
+                    {overview.kpi.sales.week.ordersCount} commande{overview.kpi.sales.week.ordersCount > 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs text-neutral-500">Revenu réel (confirmé)</p>
+                  <p className="text-2xl font-black text-white">{formatPrice(overview.kpi.sales.week.confirmedFcfa)}</p>
+                </div>
+                <div className="border-t border-white/5 pt-2 flex justify-between text-xs text-neutral-400">
+                  <span>CA attendu :</span>
+                  <span className="font-semibold text-white">{formatPrice(overview.kpi.sales.week.expectedFcfa)}</span>
+                </div>
+              </div>
+
+              {/* Ce Mois */}
+              <div className="rounded-xl border border-white/10 bg-[#111] p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-neutral-400">Ce Mois</span>
+                  <span className="rounded bg-reserve-purple/15 px-2 py-0.5 text-[10px] font-bold text-reserve-purple">
+                    {overview.kpi.sales.month.ordersCount} commande{overview.kpi.sales.month.ordersCount > 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs text-neutral-500">Revenu réel (confirmé)</p>
+                  <p className="text-2xl font-black text-white">{formatPrice(overview.kpi.sales.month.confirmedFcfa)}</p>
+                </div>
+                <div className="border-t border-white/5 pt-2 flex justify-between text-xs text-neutral-400">
+                  <span>CA attendu :</span>
+                  <span className="font-semibold text-white">{formatPrice(overview.kpi.sales.month.expectedFcfa)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── STOCKS & MEILLEURES VENTES ── */}
+          <div className="mb-8 grid gap-4 md:grid-cols-2">
+            {/* Stocks */}
+            <div className="rounded-xl border border-white/10 bg-[#111] p-5 space-y-4">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                <Layers className="h-4 w-4 text-tiktok-cyan" />
+                État des stocks (Vêtements)
+              </h3>
+              
+              <div className="space-y-3 pt-2">
+                {/* Disponible */}
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-neutral-400">En vente (disponibles)</span>
+                    <span className="font-extrabold text-status-green">{overview.kpi.inventory.disponible} pièces</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-white/5 overflow-hidden">
+                    <div className="h-full bg-status-green rounded-full" style={{ width: `${Math.min(100, (overview.kpi.inventory.disponible / (overview.kpi.inventory.disponible + overview.kpi.inventory.reserver + overview.kpi.inventory.sold || 1)) * 100)}%` }} />
+                  </div>
+                </div>
+
+                {/* Réservé */}
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-neutral-400">Réservés (acompte versé/validation)</span>
+                    <span className="font-extrabold text-reserve-purple">{overview.kpi.inventory.reserver} pièces</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-white/5 overflow-hidden">
+                    <div className="h-full bg-reserve-purple rounded-full" style={{ width: `${Math.min(100, (overview.kpi.inventory.reserver / (overview.kpi.inventory.disponible + overview.kpi.inventory.reserver + overview.kpi.inventory.sold || 1)) * 100)}%` }} />
+                  </div>
+                </div>
+
+                {/* Vendu */}
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-neutral-400">Vendus (livrés/payés)</span>
+                    <span className="font-extrabold text-neutral-400">{overview.kpi.inventory.sold} pièces</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-white/5 overflow-hidden">
+                    <div className="h-full bg-neutral-600 rounded-full" style={{ width: `${Math.min(100, (overview.kpi.inventory.sold / (overview.kpi.inventory.disponible + overview.kpi.inventory.reserver + overview.kpi.inventory.sold || 1)) * 100)}%` }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Meilleures Ventes */}
+            <div className="rounded-xl border border-white/10 bg-[#111] p-5 space-y-4">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                <ShoppingBag className="h-4 w-4 text-tiktok-pink" />
+                Meilleures Ventes (30j)
+              </h3>
+              
+              {overview.kpi.topSellers.length === 0 ? (
+                <p className="text-xs text-neutral-500 pt-4">Aucune vente enregistrée sur les 30 derniers jours.</p>
+              ) : (
+                <div className="divide-y divide-white/5 space-y-2.5">
+                  {overview.kpi.topSellers.map((seller) => (
+                    <div key={seller.code} className="flex items-center gap-3 pt-2.5 first:pt-0">
+                      <div className="h-10 w-8 shrink-0 overflow-hidden rounded bg-[#1a1a1a]">
+                        {seller.image ? (
+                          <img src={seller.image} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="h-full w-full bg-neutral-800" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-white truncate">{seller.nom}</p>
+                        <p className="text-[10px] text-neutral-500 font-mono">{seller.code} — {formatPrice(seller.prix)}</p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <span className="inline-block rounded-full bg-tiktok-pink/10 border border-tiktok-pink/20 px-2.5 py-0.5 text-xs font-bold text-tiktok-pink">
+                          {seller.qty} vendus
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── ALERTS & ANOMALIES ── */}
           <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="rounded-xl border border-white/10 bg-[#111] p-5">
               <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
                 <ReceiptText className="h-4 w-4 text-tiktok-cyan" strokeWidth={2} aria-hidden />
                 Paiements (24h)
               </div>
-              <p className="text-2xl font-bold text-white">{formatPrice(payments24hAmount)}</p>
+              <p className="text-2xl font-bold text-white">
+                {formatPrice(overview.kpi.payments.last24h.amountFcfaConfirmed)}
+              </p>
               <p className="mt-1 text-xs text-neutral-500">
-                {payments24hFailed > 0 ? `${payments24hFailed} échec(s) à traiter` : 'Aucun échec signalé'}
+                {overview.kpi.payments.last24h.failedCount > 0 ? `${overview.kpi.payments.last24h.failedCount} échec(s) à traiter` : 'Aucun échec signalé'}
               </p>
             </div>
             <div className="rounded-xl border border-white/10 bg-[#111] p-5">
@@ -198,9 +347,6 @@ const VendeuseDashboardPage = () => {
 
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-bold text-white">Raccourcis</h2>
-        <span className="text-xs text-neutral-500">
-          {promosActives} code{promosActives !== 1 ? 's' : ''} promo actif{promosActives !== 1 ? 's' : ''} (API)
-        </span>
       </div>
       <div className="mb-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {shortcuts.map(({ to, label, icon: Icon, desc }) => (
@@ -223,7 +369,7 @@ const VendeuseDashboardPage = () => {
       <h2 id="vendeuse-todo" className="mb-4 scroll-mt-24 text-lg font-bold text-white">
         À faire maintenant
       </h2>
-      <div className="overflow-hidden rounded-xl border border-white/10 bg-[#0c0c0c]">
+      <div className="overflow-hidden rounded-xl border border-white/10 bg-[#0c0c0c] mb-10">
         {overviewLoading && !overview && !overviewError ? (
           <p className="p-5 text-sm text-neutral-500">Chargement de la file…</p>
         ) : !overview ? (

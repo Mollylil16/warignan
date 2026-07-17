@@ -10,6 +10,7 @@ import {
   orderPaymentSummary,
   orderStepRequiresFullPayment,
   sumConfirmedPayments,
+  parseItemsSummary,
 } from '../services/paymentTotals.js';
 
 const router = Router();
@@ -36,10 +37,36 @@ function genUniqueOrderRef() {
 router.post('/checkout', async (req, res, next) => {
   try {
     const body = checkoutSchema.parse(req.body);
+    const lines = parseItemsSummary(body.itemsSummary);
+    if (lines.length === 0) {
+      throw new HttpError(400, 'Le récapitulatif de la commande est vide ou mal formaté.');
+    }
+
+    const codes = lines.map((l) => l.code);
+    const products = await prisma.product.findMany({ where: { code: { in: codes } } });
+
+    let computedSubtotal = 0;
+    for (const line of lines) {
+      const product = products.find((p) => p.code === line.code);
+      if (!product) {
+        throw new HttpError(404, `Produit avec le code ${line.code} introuvable dans le catalogue.`);
+      }
+
+      if (product.stock < line.qty || product.status === 'sold') {
+        throw new HttpError(
+          400,
+          `Stock insuffisant pour l'article ${product.nom} (${product.code}). Restant: ${product.stock}.`
+        );
+      }
+
+      computedSubtotal += product.prix * line.qty;
+    }
+
     const quoted = await quotePromotion({
       code: body.promoCode,
-      subtotalFcfa: body.subtotalFcfa,
+      subtotalFcfa: computedSubtotal,
     });
+
     let reference = genUniqueOrderRef();
     for (let i = 0; i < 10; i++) {
       const clash = await prisma.order.findUnique({ where: { reference } });
@@ -52,7 +79,7 @@ router.post('/checkout', async (req, res, next) => {
         clientName: body.clientName,
         city: body.city,
         itemsSummary: body.itemsSummary,
-        subtotalFcfa: body.subtotalFcfa,
+        subtotalFcfa: computedSubtotal,
         discountFcfa: quoted.discountFcfa,
         promoCode: quoted.promoCode,
         totalFcfa: quoted.totalFcfa,

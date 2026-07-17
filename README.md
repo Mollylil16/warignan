@@ -35,30 +35,15 @@ Comptes seed backend : vendeuse **`warignan`** / **`wgn225`** (l’e-mail stock�
 - **Public** : `GET /api/promotions/active` (bannière boutique), `POST /api/promotions/quote` (simulation d’un code).
 - **Checkout** : les pages paiement envoient `subtotalFcfa` et un `promoCode` optionnel ; **le serveur** calcule la remise et le total.
 
----
+## Fonctionnalités Backend
 
-## À faire côté backend (collaborateur)
-
-Cette liste est reprise **intégralement** dans `backend/README.md` pour que tout le monde la voie au même endroit. Détail pédagogique : `backend/docs/EXERCICE_JUNIOR_BACKEND.md`.
-
-1. **Livraisons** — Aujourd’hui `GET /api/deliveries` répond **501**. Modèle Prisma `Delivery` seedé mais pas d’API complète. À faire : liste + filtres (statut, date), `PATCH` pour `courierId` / `status`, routes protégées (vendeuse/admin, éventuellement livreur « mes livraisons »).
-
-2. **Réservations** — Aujourd’hui seulement `GET /api/reservations`. À faire : `PATCH /api/reservations/:id` pour `workflow` et/ou `depositStatus`, avec règles métier sur les transitions (ex. pas de passage incohérent `cancelled` → `validated`).
-
-3. **Webhooks paiement (Wave / Orange Money)** — Les routes enregistrent un JSON simplifié **sans vérifier la signature**. À faire : doc fournisseur, validation avec `WAVE_WEBHOOK_SECRET` / `ORANGE_MONEY_WEBHOOK_SECRET`, refus en prod si invalide ; éventuellement body brut (`express.raw`).
-
-4. **Pagination & perf** — Pas de `page` / `limit` sur les listes. À faire : pagination (ou curseur) + éventuellement `select` Prisma pour alléger les réponses.
-
-5. **Médias** — Upload disque local uniquement. À faire : suppression fichier si suppression en base, resize (ex. sharp), S3 / Cloudinary, etc.
-
-6. **Qualité / prod** — Tests (auth, `trackingService`, …), env strict en prod (`JWT_SECRET`, secrets webhooks), PostgreSQL en prod.
-
-**Critères de validation suggérés pour le collaborateur**
-
-- [ ] Au moins une route **livraisons** utile + **auth**.
-- [ ] Au moins une **transition** de réservation gérée côté API.
-- [ ] Une **tentative de vérif webhook** documentée (même en mock).
-- [ ] **README** mis à jour avec ce qui a été ajouté.
+Le backend implémente :
+- **Livraisons** : Modèle Prisma `Delivery`, liste, filtres, transitions d'états (assigné, en cours, livré).
+- **Réservations** : Gestion stricte du workflow de réservation (acompte, validation).
+- **Webhooks paiement** : Validation cryptographique (HMAC) des paiements Wave, Orange Money, et GeniusPay.
+- **Pagination & performance** : Les requêtes liste intègrent la pagination (`page` / `limit`).
+- **Médias** : Upload géré et redimensionnement d'images, intégration Cloudinary en cours.
+- **Qualité** : Environnement strict et tests unitaires sur les paiements.
 
 ---
 

@@ -74,12 +74,24 @@ const ProductImageCarousel = ({
             <img
               src={src}
               alt={`${alt} — ${i + 1}`}
-              className="h-full w-full select-none bg-black/20 object-contain object-center"
+              className="h-full w-full select-none bg-black/20 object-contain object-center transition-transform duration-500 ease-out group-hover:scale-105"
               style={imgFilter ? { filter: imgFilter } : undefined}
               draggable={false}
               loading="lazy"
               decoding="async"
             />
+            {/* Hover image swap for desktop (first slide only, if second image exists) */}
+            {i === 0 && slides.length > 1 && (
+              <img
+                src={slides[1]}
+                alt={`${alt} — Porté`}
+                className="absolute inset-0 h-full w-full select-none bg-black/20 object-contain object-center opacity-0 transition-all duration-500 ease-out group-hover:scale-105 group-hover:opacity-100 pointer-events-none hidden md:block"
+                style={imgFilter ? { filter: imgFilter } : undefined}
+                draggable={false}
+                loading="lazy"
+                decoding="async"
+              />
+            )}
           </div>
         ))}
       </div>

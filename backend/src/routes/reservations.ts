@@ -7,7 +7,11 @@ import { listMeta, paginationQuerySchema, resolvePagination } from '../lib/pagin
 import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import { quotePromotion } from '../services/promotionQuote.js';
-import { reservationDepositSummary, sumConfirmedPayments } from '../services/paymentTotals.js';
+import {
+  reservationDepositSummary,
+  sumConfirmedPayments,
+  parseItemsSummary,
+} from '../services/paymentTotals.js';
 
 const router = Router();
 
@@ -29,9 +33,38 @@ function genUniqueResRef() {
 router.post('/checkout', async (req, res, next) => {
   try {
     const body = checkoutSchema.parse(req.body);
+    const lines = parseItemsSummary(body.productsSummary);
+    if (lines.length === 0) {
+      throw new HttpError(400, 'Le récapitulatif de la réservation est vide ou mal formaté.');
+    }
+
+    const codes = lines.map((l) => l.code);
+    const products = await prisma.product.findMany({ where: { code: { in: codes } } });
+
+    let computedSubtotal = 0;
+    for (const line of lines) {
+      const product = products.find((p) => p.code === line.code);
+      if (!product) {
+        throw new HttpError(404, `Produit avec le code ${line.code} introuvable dans le catalogue.`);
+      }
+
+      if (
+        product.stock < line.qty ||
+        product.status === 'sold' ||
+        product.status === 'reserver'
+      ) {
+        throw new HttpError(
+          400,
+          `L'article ${product.nom} (${product.code}) n'est plus disponible.`
+        );
+      }
+
+      computedSubtotal += product.prix * line.qty;
+    }
+
     const quoted = await quotePromotion({
       code: body.promoCode,
-      subtotalFcfa: body.subtotalFcfa,
+      subtotalFcfa: computedSubtotal,
     });
     const depositFcfa = Math.ceil(quoted.totalFcfa * ACOMPTE_RESERVATION_RATIO);
     let reference = genUniqueResRef();
@@ -46,7 +79,7 @@ router.post('/checkout', async (req, res, next) => {
         clientName: body.clientName,
         clientPhone: body.clientPhone,
         productsSummary: body.productsSummary,
-        subtotalFcfa: body.subtotalFcfa,
+        subtotalFcfa: computedSubtotal,
         discountFcfa: quoted.discountFcfa,
         promoCode: quoted.promoCode,
         totalFcfa: quoted.totalFcfa,

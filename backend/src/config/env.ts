@@ -21,6 +21,10 @@ export const env = {
   GENIUSPAY_RECONCILE_CRON_ENABLED: process.env.GENIUSPAY_RECONCILE_CRON_ENABLED ?? 'false',
   GENIUSPAY_RECONCILE_CRON_INTERVAL_MINUTES: Number(process.env.GENIUSPAY_RECONCILE_CRON_INTERVAL_MINUTES) || 10,
   GENIUSPAY_RECONCILE_CRON_DAYS: Number(process.env.GENIUSPAY_RECONCILE_CRON_DAYS) || 3,
+  /** Cloudinary */
+  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME ?? '',
+  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY ?? '',
+  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET ?? '',
 };
 
 if (env.NODE_ENV === 'production' && env.JWT_SECRET === 'dev-secret-change-in-production') {

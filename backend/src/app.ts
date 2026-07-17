@@ -31,8 +31,16 @@ app.set('trust proxy', 1);
 
 app.use(
   helmet({
-    // Les uploads/images sont servis depuis /uploads, pas besoin de CSP strict ici (à faire côté Nginx idéalement).
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
+        connectSrc: ["'self'", "https://pay.genius.ci"],
+      },
+    },
   })
 );
 
