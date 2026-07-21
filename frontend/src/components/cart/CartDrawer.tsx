@@ -13,6 +13,7 @@ import { ACOMPTE_RESERVATION_RATIO, reservationDepositFcfa } from '../../constan
 import { quotePromotion } from '../../services/checkoutApi';
 import { apiErrorMessage } from '../../services/api';
 import { formatPrice } from '../../utils/formatPrice';
+import { absoluteMediaUrl } from '../../utils/mediaUrl';
 
 const LineRow = ({
   line,
@@ -37,7 +38,7 @@ const LineRow = ({
       <div className="h-16 w-12 shrink-0 overflow-hidden rounded bg-[#1a1a1a]">
         {line.imageUrl ? (
           <img
-            src={line.imageUrl}
+            src={absoluteMediaUrl(line.imageUrl)}
             alt=""
             className="h-full w-full bg-black/20 object-contain object-center"
             loading="lazy"
