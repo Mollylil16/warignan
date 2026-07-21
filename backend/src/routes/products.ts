@@ -55,7 +55,11 @@ router.get('/', optionalAuth, async (req, res, next) => {
     const showAll = q.showAll === 'true' && isStaff;
 
     const { items, total, page, limit } = await listProducts({ ...q, showAll });
-    res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+    if (showAll || isStaff) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    } else {
+      res.setHeader('Cache-Control', 'public, max-age=5, stale-while-revalidate=10');
+    }
     res.json({ data: items, meta: listMeta(page, limit, total) });
   } catch (e) {
     next(e);
@@ -66,7 +70,7 @@ router.get('/:id', async (req, res, next) => {
   try {
     const p = await getProductById(req.params.id);
     if (!p) throw new HttpError(404, 'Produit introuvable');
-    res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+    res.setHeader('Cache-Control', 'public, max-age=5, stale-while-revalidate=10');
     res.json(productToDto(p));
   } catch (e) {
     next(e);
@@ -143,8 +147,9 @@ router.delete(
   async (req, res, next) => {
     try {
       const existing = await getProductById(req.params.id);
-      if (!existing) throw new HttpError(404, 'Produit introuvable');
-      await deleteProduct(req.params.id);
+      if (existing) {
+        await deleteProduct(req.params.id);
+      }
       res.status(204).send();
     } catch (e) {
       next(e);
