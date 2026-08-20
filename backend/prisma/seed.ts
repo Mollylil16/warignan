@@ -9,6 +9,7 @@ const prisma = new PrismaClient();
  * Les données métier arrivent des clients (checkout) et des actions vendeuse dans l’app.
  */
 async function main() {
+  await prisma.paymentIntent.deleteMany();
   await prisma.promotion.deleteMany();
   await prisma.paymentEvent.deleteMany();
   await prisma.mediaAsset.deleteMany();

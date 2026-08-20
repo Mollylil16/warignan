@@ -36,4 +36,21 @@ router.patch('/live', requireAuth, requireRoles('vendeuse', 'admin'), async (req
   }
 });
 
+router.post('/reset-test-data', requireAuth, requireRoles('admin'), async (_req, res, next) => {
+  try {
+    await prisma.paymentIntent.deleteMany();
+    await prisma.paymentEvent.deleteMany();
+    await prisma.mediaAsset.deleteMany();
+    await prisma.delivery.deleteMany();
+    await prisma.order.deleteMany();
+    await prisma.reservation.deleteMany();
+    await prisma.product.deleteMany();
+    await prisma.promotion.deleteMany();
+
+    res.json({ message: 'Toutes les données de test (commandes, paiements, réservations, événements, produits, médias, promotions) ont été supprimées avec succès.' });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
