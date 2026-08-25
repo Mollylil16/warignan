@@ -50,6 +50,12 @@ app.use(
     credentials: true,
   })
 );
+
+// Désactiver le cache pour toutes les requêtes API par défaut
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  next();
+});
 /** Webhooks : corps brut pour vérification HMAC (avant express.json). */
 app.use('/api/webhooks', webhookLimiter, webhooksRouter);
 app.use(express.json({ limit: '2mb' }));
