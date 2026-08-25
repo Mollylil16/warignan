@@ -146,8 +146,11 @@ router.post('/geniuspay', rawBodyParser, async (req, res, next) => {
   try {
     const raw = req.body as Buffer;
     if (!Buffer.isBuffer(raw) || raw.length === 0) {
+      logger.warn('[webhook][geniuspay] Corps vide ou non-buffer reçu');
       return res.status(400).json({ error: 'Corps JSON attendu' });
     }
+
+    logger.info({ size: raw.length, headers: { event: req.headers['x-webhook-event'], ts: req.headers['x-webhook-timestamp'] } }, '[webhook][geniuspay] reçu');
 
     const timestampHeader = req.headers['x-webhook-timestamp'];
     const ts = Number(Array.isArray(timestampHeader) ? timestampHeader[0] : timestampHeader);
@@ -195,12 +198,28 @@ router.post('/geniuspay', rawBodyParser, async (req, res, next) => {
           ? 'reservation'
           : 'order';
 
-    const ref = warignanRef || String(d?.reference ?? '').trim().toUpperCase();
+    const txRef = String(d?.reference ?? '').trim() || null;
+
+    // Fallback : si pas de warignan_reference dans les métadonnées,
+    // chercher dans nos PaymentIntents par la référence GeniusPay
+    let ref = warignanRef || String(d?.reference ?? '').trim().toUpperCase();
+    if (!warignanRef && txRef) {
+      const intent = await prisma.paymentIntent.findFirst({
+        where: { provider: 'geniuspay', externalRef: txRef },
+        select: { reference: true },
+      });
+      if (intent) {
+        ref = intent.reference;
+        logger.info({ txRef, ref }, '[webhook][geniuspay] ref trouvée via PaymentIntent (fallback)');
+      } else {
+        logger.warn({ event, txRef, meta }, '[webhook][geniuspay] warignan_reference absente du payload et aucun PaymentIntent trouvé');
+      }
+    }
+
     const amountFcfa = Math.round(Number(d?.amount ?? 0));
     const status = event === 'payment.success' ? 'confirmed' : mapGeniusPayStatus(d?.status);
     const provider = mapGeniusPayProvider(d?.provider);
     const externalId = (parsed as any).id ? `geniuspay:webhook:${String((parsed as any).id)}` : null;
-    const txRef = String(d?.reference ?? '').trim() || null;
 
     if (ref && amountFcfa >= 0) {
       await recordPaymentEvent({
@@ -212,11 +231,13 @@ router.post('/geniuspay', rawBodyParser, async (req, res, next) => {
         externalId,
         payload: json as Prisma.InputJsonValue,
       });
-      logger.info({ event, ref, flow, amount: amountFcfa, provider, status }, '[webhook][geniuspay]');
+      logger.info({ event, ref, flow, amount: amountFcfa, provider, status, txRef }, '[webhook][geniuspay] événement enregistré');
+    } else {
+      logger.warn({ event, ref, amountFcfa }, '[webhook][geniuspay] ref vide ou montant invalide — événement non enregistré');
     }
 
     if (ref && txRef) {
-      await prisma.paymentIntent.updateMany({
+      const updated = await prisma.paymentIntent.updateMany({
         where: { reference: ref, provider: 'geniuspay', externalRef: txRef },
         data: {
           status: status === 'confirmed' ? 'confirmed' : status === 'failed' ? 'failed' : 'pending',
@@ -224,10 +245,12 @@ router.post('/geniuspay', rawBodyParser, async (req, res, next) => {
           payload: json as Prisma.InputJsonValue,
         },
       });
+      logger.info({ ref, txRef, updated: updated.count }, '[webhook][geniuspay] PaymentIntent mis à jour');
     }
 
     res.status(200).json({ received: true });
   } catch (e) {
+    logger.error({ err: e }, '[webhook][geniuspay] ERREUR');
     next(e);
   }
 });

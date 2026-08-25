@@ -146,3 +146,45 @@ export async function geniusPayListPayments(args: {
   return (Array.isArray(list) ? list : []) as GeniusPayPaymentRow[];
 }
 
+/**
+ * Récupère un paiement GeniusPay par sa référence externe (la référence retournée
+ * par GeniusPay lors de la création du checkout).
+ */
+export async function geniusPayGetPayment(
+  externalRef: string
+): Promise<GeniusPayPaymentRow | null> {
+  const key = env.GENIUSPAY_API_KEY.trim();
+  const secret = env.GENIUSPAY_API_SECRET.trim();
+  if (!key || !secret) return null;
+
+  const base = env.GENIUSPAY_API_BASE_URL.replace(/\/+$/, '');
+  const url = `${base}/payments/${encodeURIComponent(externalRef)}`;
+
+  const ctrl = new AbortController();
+  const timeout = setTimeout(() => ctrl.abort(), 15_000);
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': key,
+        'X-API-Secret': secret,
+      },
+      signal: ctrl.signal,
+    });
+    clearTimeout(timeout);
+
+    let json: any = null;
+    try {
+      json = await res.json();
+    } catch {
+      // ignore
+    }
+    if (!res.ok || !json?.success || !json?.data) return null;
+    return json.data as GeniusPayPaymentRow;
+  } catch {
+    clearTimeout(timeout);
+    return null;
+  }
+}
+

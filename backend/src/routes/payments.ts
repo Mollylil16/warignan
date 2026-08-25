@@ -4,7 +4,8 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { recordPaymentEvent } from '../services/paymentEventService.js';
-import { geniusPayCreatePayment } from '../services/geniusPay.js';
+import { geniusPayCreatePayment, geniusPayGetPayment } from '../services/geniusPay.js';
+import { logger } from '../lib/logger.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import { sumConfirmedPayments } from '../services/paymentTotals.js';
 import { reconcileGeniusPay } from '../services/geniusPayReconcile.js';
@@ -120,6 +121,96 @@ router.post('/geniuspay/checkout', async (req, res, next) => {
       payload: JSON.parse(JSON.stringify({ kind: 'geniuspay.checkout', ...g })) as Prisma.InputJsonValue,
     });
     return res.status(201).json({ checkoutUrl: g.checkout_url ?? g.payment_url, provider: g.gateway ?? 'geniuspay' });
+  } catch (e) {
+    next(e);
+  }
+});
+
+/**
+ * Vérifie l'état d'un paiement GeniusPay pour une référence donnée.
+ * Appel public (pas besoin d'auth) — utilisé côté client après retour de checkout.
+ * Interroge l'API GeniusPay et crée le PaymentEvent confirmé si le paiement est complété.
+ */
+const verifySingleSchema = z.object({
+  reference: z.string().min(3),
+  flow: z.enum(['order', 'reservation']),
+});
+
+router.post('/geniuspay/verify-single', async (req, res, next) => {
+  try {
+    const body = verifySingleSchema.parse(req.body);
+    const ref = body.reference.trim().toUpperCase();
+
+    // Trouver le PaymentIntent pending pour cette référence
+    const intent = await prisma.paymentIntent.findFirst({
+      where: { reference: ref, provider: 'geniuspay', status: 'pending' },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!intent?.externalRef) {
+      return res.json({ status: 'no_intent', confirmed: false });
+    }
+
+    // Vérifier si déjà confirmé dans les PaymentEvents
+    const alreadyConfirmed = await sumConfirmedPayments(ref, body.flow);
+    if (body.flow === 'order') {
+      const order = await prisma.order.findUnique({ where: { reference: ref } });
+      if (order && alreadyConfirmed >= order.totalFcfa) {
+        return res.json({ status: 'already_confirmed', confirmed: true, paidFcfa: alreadyConfirmed });
+      }
+    } else {
+      const reservation = await prisma.reservation.findUnique({ where: { reference: ref } });
+      if (reservation && alreadyConfirmed >= reservation.depositFcfa) {
+        return res.json({ status: 'already_confirmed', confirmed: true, paidFcfa: alreadyConfirmed });
+      }
+    }
+
+    // Interroger GeniusPay pour l'état du paiement
+    const payment = await geniusPayGetPayment(intent.externalRef);
+    if (!payment) {
+      logger.warn({ ref, externalRef: intent.externalRef }, '[verify-single] GeniusPay API ne retourne pas le paiement');
+      return res.json({ status: 'pending', confirmed: false });
+    }
+
+    const gpStatus = (payment.status ?? '').toLowerCase();
+    if (gpStatus === 'completed' || gpStatus === 'success' || gpStatus === 'succeeded') {
+      const amountFcfa = Math.round(Number(payment.amount ?? intent.amountFcfa));
+      const provider = (payment.provider ?? '').toLowerCase().includes('wave') ? 'wave'
+        : (payment.provider ?? '').toLowerCase().includes('orange') ? 'orange'
+        : 'geniuspay';
+      const externalId = `geniuspay:verify:${intent.externalRef}`;
+
+      await recordPaymentEvent({
+        reference: ref,
+        flow: body.flow,
+        amountFcfa,
+        status: 'confirmed',
+        provider,
+        externalId,
+        payload: JSON.parse(JSON.stringify({ kind: 'geniuspay.verify-single', payment })) as Prisma.InputJsonValue,
+      });
+
+      await prisma.paymentIntent.update({
+        where: { id: intent.id },
+        data: { status: 'confirmed', externalId },
+      });
+
+      logger.info({ ref, externalRef: intent.externalRef, amountFcfa, provider }, '[verify-single] paiement confirmé');
+
+      const totalPaid = await sumConfirmedPayments(ref, body.flow);
+      return res.json({ status: 'confirmed', confirmed: true, paidFcfa: totalPaid });
+    }
+
+    if (gpStatus === 'failed' || gpStatus === 'cancelled' || gpStatus === 'canceled' || gpStatus === 'expired') {
+      await prisma.paymentIntent.update({
+        where: { id: intent.id },
+        data: { status: 'failed' },
+      });
+      return res.json({ status: 'failed', confirmed: false });
+    }
+
+    // Toujours pending côté GeniusPay
+    return res.json({ status: 'pending', confirmed: false });
   } catch (e) {
     next(e);
   }

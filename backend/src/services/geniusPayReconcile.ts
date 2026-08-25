@@ -18,7 +18,20 @@ export async function reconcileGeniusPay(days: number) {
 
   for (const p of rows) {
     const meta = (p.metadata ?? {}) as Record<string, unknown>;
-    const ref = String(meta.warignan_reference ?? '').trim().toUpperCase();
+    let ref = String(meta.warignan_reference ?? '').trim().toUpperCase();
+
+    // Fallback : si pas de warignan_reference dans les métadonnées,
+    // chercher dans nos PaymentIntents par la référence GeniusPay
+    if (!ref && p.reference) {
+      const intent = await prisma.paymentIntent.findFirst({
+        where: { provider: 'geniuspay', externalRef: p.reference },
+        select: { reference: true, flow: true },
+      });
+      if (intent) {
+        ref = intent.reference;
+      }
+    }
+
     if (!ref) {
       skipped += 1;
       continue;

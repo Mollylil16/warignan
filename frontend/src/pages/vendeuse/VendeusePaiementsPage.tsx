@@ -134,9 +134,23 @@ const VendeusePaiementsPage = () => {
 
   const reconcile = async () => {
     try {
-      await api.post('/payments/geniuspay/reconcile', { days: 3 });
+      const { data } = await api.post<{
+        from: string;
+        to: string;
+        scanned: number;
+        createdOrExisting: number;
+        updatedIntents: number;
+        skipped: number;
+      }>('/payments/geniuspay/reconcile', { days: 3 });
       void refetch();
-      window.alert('Réconciliation GeniusPay lancée (3 jours).');
+      window.alert(
+        `Réconciliation GeniusPay terminée :\n` +
+        `• Période : ${data.from} → ${data.to}\n` +
+        `• Paiements scannés : ${data.scanned}\n` +
+        `• Événements créés/existants : ${data.createdOrExisting}\n` +
+        `• PaymentIntents mis à jour : ${data.updatedIntents}\n` +
+        `• Ignorés (sans référence) : ${data.skipped}`
+      );
     } catch (e) {
       window.alert(apiErrorMessage(e, 'Réconciliation impossible.'));
     }
