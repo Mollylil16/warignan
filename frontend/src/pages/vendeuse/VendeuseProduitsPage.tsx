@@ -37,7 +37,7 @@ export default function VendeuseProduitsPage() {
   const mediaQ = useQuery({
     queryKey: ['media', 'picker'],
     queryFn: async () => {
-      const { data } = await api.get<{ data: MediaRow[] }>('/media', {
+      const { data } = await api.get<{ data: MediaRow[] }>('/assets', {
         params: { page: 1, limit: STAFF_LIST_LIMIT },
       });
       return data.data;
@@ -50,7 +50,7 @@ export default function VendeuseProduitsPage() {
       fd.append('file', file);
       fd.append('gallery', category === 'robe' ? 'robes' : 'crops');
       fd.append('isPrimary', 'false');
-      const { data } = await api.post<MediaRow>('/media', fd);
+      const { data } = await api.post<MediaRow>('/assets', fd);
       return data;
     },
     onSuccess: (row) => {

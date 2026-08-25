@@ -75,6 +75,7 @@ app.use('/api/tracking', trackingRouter);
 app.use('/api/suivi', suiviRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/media', mediaRouter);
+app.use('/api/assets', mediaRouter);
 app.use('/api/deliveries', deliveriesRouter);
 app.use('/api/admin/livreurs', livreursRouter);
 app.use('/api/dashboard', dashboardRouter);

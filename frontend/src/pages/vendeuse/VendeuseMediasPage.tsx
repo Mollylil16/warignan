@@ -65,7 +65,7 @@ const VendeuseMediasPage = () => {
   const listQ = useQuery({
     queryKey: ['media'],
     queryFn: async () => {
-      const { data } = await api.get<{ data: MediaRow[] }>('/media', {
+      const { data } = await api.get<{ data: MediaRow[] }>('/assets', {
         params: { page: 1, limit: STAFF_LIST_LIMIT },
       });
       return data.data;
@@ -81,7 +81,7 @@ const VendeuseMediasPage = () => {
       fd.append('gallery', slot);
       fd.append('isPrimary', 'false');
       try {
-        await api.post('/media', fd, {
+        await api.post('/assets', fd, {
           onUploadProgress: (e) => {
             if (e.total) {
               const pct = Math.round((e.loaded / e.total) * 100);
@@ -105,7 +105,7 @@ const VendeuseMediasPage = () => {
     async (id: string) => {
       setDeleteId(id);
       try {
-        await api.delete(`/media/${id}`);
+        await api.delete(`/assets/${id}`);
         await qc.invalidateQueries({ queryKey: ['media'] });
       } finally {
         setDeleteId(null);
