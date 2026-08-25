@@ -6,6 +6,7 @@ import type { MediaGallerySlot } from '../../types/domain';
 import { STAFF_LIST_LIMIT } from '../../constants/apiPagination';
 import { api } from '../../services/api';
 import { absoluteMediaUrl } from '../../utils/mediaUrl';
+import { compressImage } from '../../utils/imageCompressor';
 
 /**
  * “Images du site” = visuels NON liés à un produit.
@@ -114,11 +115,18 @@ const VendeuseMediasPage = () => {
     [qc]
   );
 
-  const onFiles = (e: ChangeEvent<HTMLInputElement>) => {
+  const onFiles = async (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files?.length) return;
     const slot = defaultSlot as MediaGallerySlot;
-    Array.from(files).forEach((f) => void uploadFile(f, slot));
+    for (const f of Array.from(files)) {
+      try {
+        const compressed = await compressImage(f);
+        void uploadFile(compressed, slot);
+      } catch {
+        void uploadFile(f, slot);
+      }
+    }
     e.target.value = '';
   };
 

@@ -7,6 +7,7 @@ import { api, apiErrorMessage } from '../../services/api';
 import { STAFF_LIST_LIMIT } from '../../constants/apiPagination';
 import { absoluteMediaUrl } from '../../utils/mediaUrl';
 import { formatPrice } from '../../utils/formatPrice';
+import { compressImage } from '../../utils/imageCompressor';
 
 type MediaRow = {
   id: string;
@@ -60,10 +61,17 @@ export default function VendeuseProduitsPage() {
     },
   });
 
-  const onFiles = (e: ChangeEvent<HTMLInputElement>) => {
+  const onFiles = async (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files?.length) return;
-    Array.from(files).forEach((f) => uploadM.mutate(f));
+    for (const f of Array.from(files)) {
+      try {
+        const compressed = await compressImage(f);
+        uploadM.mutate(compressed);
+      } catch {
+        uploadM.mutate(f);
+      }
+    }
     e.target.value = '';
   };
 
