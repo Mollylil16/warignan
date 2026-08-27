@@ -358,6 +358,16 @@ const VendeuseCommandesPage = () => {
                 <div>
                   <p className="font-mono text-sm text-tiktok-cyan">{o.reference}</p>
                   <p className="text-lg font-bold text-white">{o.clientName}</p>
+                  {o.clientPhone && (
+                    <p className="text-xs">
+                      <a
+                        href={`tel:${o.clientPhone}`}
+                        className="font-mono text-tiktok-cyan underline-offset-2 hover:underline"
+                      >
+                        📞 {o.clientPhone}
+                      </a>
+                    </p>
+                  )}
                   <p className="text-sm text-neutral-500">{o.city}</p>
                   <p className="mt-1 text-xs text-neutral-400">
                     Livreur :{' '}
@@ -548,6 +558,16 @@ const VendeuseCommandesPage = () => {
               <div>
                 <p className="font-mono text-sm text-tiktok-cyan">{drawerOrder.reference}</p>
                 <p className="text-lg font-bold">{drawerOrder.clientName}</p>
+                {drawerOrder.clientPhone && (
+                  <p className="text-xs">
+                    <a
+                      href={`tel:${drawerOrder.clientPhone}`}
+                      className="font-mono text-tiktok-cyan underline-offset-2 hover:underline"
+                    >
+                      📞 {drawerOrder.clientPhone}
+                    </a>
+                  </p>
+                )}
                 <p className="text-sm text-neutral-500">{drawerOrder.city}</p>
               </div>
               <button

@@ -23,6 +23,7 @@ const courierAssignSchema = z.object({
 
 const checkoutSchema = z.object({
   clientName: z.string().min(1).max(120),
+  clientPhone: z.string().min(6).max(40).optional(),
   city: z.string().min(1).max(120),
   itemsSummary: z.string().min(1).max(2000),
   subtotalFcfa: z.number().int().positive(),
@@ -77,6 +78,7 @@ router.post('/checkout', async (req, res, next) => {
       data: {
         reference,
         clientName: body.clientName,
+        clientPhone: body.clientPhone ?? null,
         city: body.city,
         itemsSummary: body.itemsSummary,
         subtotalFcfa: computedSubtotal,
@@ -91,6 +93,7 @@ router.post('/checkout', async (req, res, next) => {
       id: order.id,
       reference: order.reference,
       clientName: order.clientName,
+      clientPhone: order.clientPhone,
       city: order.city,
       itemsSummary: order.itemsSummary,
       subtotalFcfa: order.subtotalFcfa,
@@ -129,6 +132,7 @@ router.get('/', async (req, res, next) => {
       where.OR = [
         { reference: { contains: q.q } },
         { clientName: { contains: q.q } },
+        { clientPhone: { contains: q.q } },
         { city: { contains: q.q } },
         { itemsSummary: { contains: q.q } },
       ];
@@ -179,6 +183,7 @@ router.get('/', async (req, res, next) => {
           id: o.id,
           reference: o.reference,
           clientName: o.clientName,
+          clientPhone: o.clientPhone ?? null,
           city: o.city,
           itemsSummary: o.itemsSummary,
           subtotalFcfa: o.subtotalFcfa,

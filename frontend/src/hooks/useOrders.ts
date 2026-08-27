@@ -9,6 +9,7 @@ export type StaffOrderRow = {
   id: string;
   reference: string;
   clientName: string;
+  clientPhone?: string | null;
   city: string;
   itemsSummary: string;
   subtotalFcfa?: number;

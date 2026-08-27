@@ -15,6 +15,8 @@ const PaiementCommandePage = () => {
   const orderSub = subtotalLines(orderLines);
 
   const [clientName, setClientName] = useState('');
+  const [clientPhone, setClientPhone] = useState('');
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [city, setCity] = useState('');
   const [promoCode, setPromoCode] = useState(orderPromoCodeStore);
   const [discountFcfa, setDiscountFcfa] = useState(orderDiscountStore);
@@ -22,6 +24,11 @@ const PaiementCommandePage = () => {
   const [serverRef, setServerRef] = useState<string | null>(null);
   const [checkoutErr, setCheckoutErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const validatePhone = (value: string): boolean => {
+    const digits = value.replace(/[\s\-().]/g, '');
+    return /^(\+225|225)?[0-9]{10}$/.test(digits);
+  };
 
   const applyPromo = async () => {
     setCheckoutErr(null);
@@ -39,10 +46,18 @@ const PaiementCommandePage = () => {
   const handleConfirm = async (e: FormEvent) => {
     e.preventDefault();
     setCheckoutErr(null);
+    setPhoneError(null);
+
+    if (!validatePhone(clientPhone)) {
+      setPhoneError('Numéro invalide — format attendu : +225 07 00 00 00 00');
+      return;
+    }
+
     setBusy(true);
     try {
       const res = await checkoutOrder({
         clientName: clientName.trim(),
+        clientPhone: clientPhone.trim(),
         city: city.trim(),
         itemsSummary: cartLinesToSummary(orderLines),
         subtotalFcfa: orderSub,
@@ -145,6 +160,23 @@ const PaiementCommandePage = () => {
               className="w-full rounded-lg border border-white/10 bg-black px-3 py-2 text-sm text-white"
               placeholder="Prénom N."
             />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-neutral-400">
+              Numéro de téléphone (WhatsApp / Appel)
+            </label>
+            <input
+              type="tel"
+              required
+              value={clientPhone}
+              onChange={(e) => {
+                setClientPhone(e.target.value);
+                if (phoneError && validatePhone(e.target.value)) setPhoneError(null);
+              }}
+              className="w-full rounded-lg border border-white/10 bg-black px-3 py-2 text-sm text-white"
+              placeholder="+225 07 00 00 00 00"
+            />
+            {phoneError && <p className="mt-1 text-xs text-red-400">{phoneError}</p>}
           </div>
           <div>
             <label className="mb-1 block text-xs font-semibold text-neutral-400">Ville / commune</label>

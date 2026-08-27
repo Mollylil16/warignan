@@ -127,6 +127,7 @@ model Order {
   id           String    @id @default(cuid())
   reference    String    @unique
   clientName   String
+  clientPhone  String?
   city         String
   itemsSummary String
   subtotalFcfa Int       @default(0)

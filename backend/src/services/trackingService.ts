@@ -26,6 +26,7 @@ export async function resolveTracking(reference: string): Promise<TrackingRespon
       data: {
         reference: order.reference,
         clientName: order.clientName,
+        clientPhone: order.clientPhone ?? null,
         city: order.city,
         itemsSummary: order.itemsSummary,
         subtotalFcfa: order.subtotalFcfa,

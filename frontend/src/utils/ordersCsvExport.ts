@@ -10,7 +10,7 @@ function csvCell(v: unknown): string {
 export function downloadOrdersCsv(rows: StaffOrderRow[], baseName: string): void {
   const sep = ';';
   const headers = [
-    'Référence', 'Client', 'Ville', 'Articles',
+    'Référence', 'Client', 'Téléphone', 'Ville', 'Articles',
     'Total_FCFA', 'Encaissé_FCFA', 'Reste_FCFA',
     'Statut_paiement', 'Étape', 'Livreur', 'Créée_ISO',
   ];
@@ -20,6 +20,7 @@ export function downloadOrdersCsv(rows: StaffOrderRow[], baseName: string): void
       [
         csvCell(o.reference),
         csvCell(o.clientName),
+        csvCell(o.clientPhone ?? ''),
         csvCell(o.city),
         csvCell(o.itemsSummary),
         csvCell(o.totalFcfa),

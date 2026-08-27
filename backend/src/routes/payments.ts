@@ -232,7 +232,7 @@ router.get('/summary', async (req, res, next) => {
     if (q.flow === 'order') {
       const order = await prisma.order.findUnique({
         where: { reference: ref },
-        select: { reference: true, totalFcfa: true, clientName: true, city: true },
+        select: { reference: true, totalFcfa: true, clientName: true, clientPhone: true, city: true },
       });
       if (!order) throw new HttpError(404, 'Commande introuvable');
       const paid = await sumConfirmedPayments(ref, 'order');
@@ -243,7 +243,7 @@ router.get('/summary', async (req, res, next) => {
         expectedFcfa: order.totalFcfa,
         paidConfirmedFcfa: paid,
         remainingFcfa: remaining,
-        target: { kind: 'order' as const, clientName: order.clientName, city: order.city },
+        target: { kind: 'order' as const, clientName: order.clientName, clientPhone: order.clientPhone, city: order.city },
       });
     }
     const r = await prisma.reservation.findUnique({
@@ -395,7 +395,7 @@ router.get('/', requireAuth, requireRoles('vendeuse', 'admin'), async (req, res,
     const [orders, reservations] = await Promise.all([
       prisma.order.findMany({
         where: { reference: { in: refs } },
-        select: { reference: true, id: true, totalFcfa: true, clientName: true, city: true },
+        select: { reference: true, id: true, totalFcfa: true, clientName: true, clientPhone: true, city: true },
       }),
       prisma.reservation.findMany({
         where: { reference: { in: refs } },
@@ -411,7 +411,7 @@ router.get('/', requireAuth, requireRoles('vendeuse', 'admin'), async (req, res,
     ]);
     const orderByRef = new Map<
       string,
-      { reference: string; id: string; totalFcfa: number; clientName: string; city: string }
+      { reference: string; id: string; totalFcfa: number; clientName: string; clientPhone: string | null; city: string }
     >(orders.map((o) => [o.reference, o]));
     const resByRef = new Map(
       reservations.map((r) => [
@@ -464,6 +464,7 @@ router.get('/', requireAuth, requireRoles('vendeuse', 'admin'), async (req, res,
                   id: order.id,
                   reference: order.reference,
                   clientName: order.clientName,
+                  clientPhone: order.clientPhone,
                   city: order.city,
                   totalFcfa: order.totalFcfa,
                 }

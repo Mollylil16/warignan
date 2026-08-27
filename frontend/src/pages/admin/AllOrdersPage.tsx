@@ -118,7 +118,17 @@ const AllOrdersPage = () => {
                   orders.map((o) => (
                     <tr key={o.id} className="text-neutral-300 hover:bg-white/[0.02]">
                       <td className="px-4 py-3 font-mono text-xs text-tiktok-pink">{o.reference}</td>
-                      <td className="px-4 py-3 text-white">{o.clientName}</td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-white">{o.clientName}</div>
+                        {o.clientPhone && (
+                          <a
+                            href={`tel:${o.clientPhone}`}
+                            className="block font-mono text-xs text-tiktok-cyan hover:underline"
+                          >
+                            {o.clientPhone}
+                          </a>
+                        )}
+                      </td>
                       <td className="px-4 py-3">{o.city}</td>
                       <td className="px-4 py-3">{stepLabel[o.step] ?? o.step}</td>
                       <td className="px-4 py-3">

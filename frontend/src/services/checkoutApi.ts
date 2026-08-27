@@ -14,6 +14,7 @@ export async function quotePromotion(body: { code?: string; subtotalFcfa: number
 
 export async function checkoutOrder(body: {
   clientName: string;
+  clientPhone?: string;
   city: string;
   itemsSummary: string;
   subtotalFcfa: number;
