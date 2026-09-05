@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma.js';
 import { orderPaymentSummary, sumConfirmedPayments, reservationDepositSummary } from './paymentTotals.js';
+import { enrichSingleSummary } from './orderItems.js';
 
 export type TrackingResponse =
   | { kind: 'order'; data: Record<string, unknown> }
@@ -21,6 +22,7 @@ export async function resolveTracking(reference: string): Promise<TrackingRespon
   if (order) {
     const paid = await sumConfirmedPayments(order.reference, 'order');
     const pay = orderPaymentSummary(order.totalFcfa, paid);
+    const items = await enrichSingleSummary(order.itemsSummary);
     return {
       kind: 'order',
       data: {
@@ -29,6 +31,7 @@ export async function resolveTracking(reference: string): Promise<TrackingRespon
         clientPhone: order.clientPhone ?? null,
         city: order.city,
         itemsSummary: order.itemsSummary,
+        items,
         subtotalFcfa: order.subtotalFcfa,
         discountFcfa: order.discountFcfa,
         promoCode: order.promoCode,
@@ -48,6 +51,7 @@ export async function resolveTracking(reference: string): Promise<TrackingRespon
   if (reservation) {
     const paidRes = await sumConfirmedPayments(reservation.reference, 'reservation');
     const dep = reservationDepositSummary(reservation.depositFcfa, paidRes);
+    const items = await enrichSingleSummary(reservation.productsSummary);
     return {
       kind: 'reservation',
       data: {
@@ -55,6 +59,7 @@ export async function resolveTracking(reference: string): Promise<TrackingRespon
         clientName: reservation.clientName,
         clientPhone: reservation.clientPhone,
         productsSummary: reservation.productsSummary,
+        items,
         subtotalFcfa: reservation.subtotalFcfa,
         discountFcfa: reservation.discountFcfa,
         promoCode: reservation.promoCode,

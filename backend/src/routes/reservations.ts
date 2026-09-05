@@ -12,6 +12,11 @@ import {
   sumConfirmedPayments,
   parseItemsSummary,
 } from '../services/paymentTotals.js';
+import {
+  enrichSummariesWithProducts,
+  buildEnrichedItems,
+  type OrderItemDetail,
+} from '../services/orderItems.js';
 
 const router = Router();
 
@@ -88,12 +93,16 @@ router.post('/checkout', async (req, res, next) => {
         workflow: 'awaiting_deposit',
       },
     });
+    const productMap = new Map(products.map((p) => [p.code, p]));
+    const items = buildEnrichedItems(r.productsSummary, productMap);
+
     res.status(201).json({
       id: r.id,
       reference: r.reference,
       clientName: r.clientName,
       clientPhone: r.clientPhone,
       productsSummary: r.productsSummary,
+      items,
       subtotalFcfa: r.subtotalFcfa,
       discountFcfa: r.discountFcfa,
       promoCode: r.promoCode,
@@ -146,7 +155,8 @@ function reservationToDto(
     workflow: ReservationWorkflow;
     createdAt: Date;
   },
-  depositPay: ReturnType<typeof reservationDepositSummary>
+  depositPay: ReturnType<typeof reservationDepositSummary>,
+  items: OrderItemDetail[] = []
 ) {
   return {
     id: r.id,
@@ -154,6 +164,7 @@ function reservationToDto(
     clientName: r.clientName,
     clientPhone: r.clientPhone,
     productsSummary: r.productsSummary,
+    items,
     subtotalFcfa: r.subtotalFcfa,
     discountFcfa: r.discountFcfa,
     promoCode: r.promoCode,
@@ -251,10 +262,13 @@ router.get('/', async (req, res, next) => {
       }
     }
 
+    const itemsBySummary = await enrichSummariesWithProducts(rows.map((r) => r.productsSummary));
+
     res.json({
       data: rows.map((r) => {
         const paid = paidResByRef.get(r.reference) ?? 0;
-        return reservationToDto(r, reservationDepositSummary(r.depositFcfa, paid));
+        const items = itemsBySummary.get(r.productsSummary) ?? [];
+        return reservationToDto(r, reservationDepositSummary(r.depositFcfa, paid), items);
       }),
       meta: listMeta(page, limit, total),
     });

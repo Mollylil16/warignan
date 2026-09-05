@@ -7,6 +7,7 @@ import type { DepositStatus, ReservationWorkflow } from '../../types/domain';
 import { useReservationsList, type StaffReservationRow } from '../../hooks/useReservations';
 import { api } from '../../services/api';
 import { formatPrice } from '../../utils/formatPrice';
+import { OrderItemsList } from '../../components/orders/OrderItemsList';
 
 const depositLabel: Record<DepositStatus, string> = {
   pending: 'Acompte en attente',
@@ -196,7 +197,9 @@ const VendeuseReservationsPage = () => {
                         </button>
                       </div>
 
-                      <p className="mb-3 line-clamp-2 text-xs text-neutral-400">{r.productsSummary}</p>
+                      <div className="mb-3">
+                        <OrderItemsList items={r.items} summary={r.productsSummary} variant="cards" />
+                      </div>
 
                       <div className="mb-3 grid gap-1 text-xs text-neutral-400">
                         <div className="flex justify-between">

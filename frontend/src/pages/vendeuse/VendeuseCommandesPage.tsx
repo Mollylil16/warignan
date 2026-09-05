@@ -11,6 +11,7 @@ import { useDebounce } from '../../hooks/useDebounce';
 import { api, apiErrorMessage } from '../../services/api';
 import { formatPrice } from '../../utils/formatPrice';
 import { downloadOrdersCsv } from '../../utils/ordersCsvExport';
+import { OrderItemsList } from '../../components/orders/OrderItemsList';
 
 const steps: OrderStep[] = ['preparation', 'emballage', 'expediee', 'livree'];
 
@@ -39,6 +40,8 @@ const VendeuseCommandesPage = () => {
   const [maxTotal, setMaxTotal] = useState('');
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [drawerId, setDrawerId] = useState<string | null>(null);
+  const [editPhone, setEditPhone] = useState<string>('@@closed');
+  const [savingPhone, setSavingPhone] = useState(false);
   const [courierByOrder, setCourierByOrder] = useState<Record<string, string>>({});
 
   const debouncedQ = useDebounce(q, 300);
@@ -62,6 +65,7 @@ const VendeuseCommandesPage = () => {
 
   useEffect(() => {
     if (!drawerId) return;
+    setEditPhone('@@closed'); // ferme le formulaire quand on change de commande
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setDrawerId(null);
     };
@@ -411,7 +415,9 @@ const VendeuseCommandesPage = () => {
                 </div>
               </div>
 
-              <p className="mb-4 text-sm text-neutral-400">{o.itemsSummary}</p>
+              <div className="mb-4">
+                <OrderItemsList items={o.items} summary={o.itemsSummary} variant="cards" />
+              </div>
 
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/30 px-3 py-2">
                 <label className="flex items-center gap-2 text-sm text-neutral-300">
@@ -558,17 +564,66 @@ const VendeuseCommandesPage = () => {
               <div>
                 <p className="font-mono text-sm text-tiktok-cyan">{drawerOrder.reference}</p>
                 <p className="text-lg font-bold">{drawerOrder.clientName}</p>
-                {drawerOrder.clientPhone && (
-                  <p className="text-xs">
+                {/* Numéro de téléphone + édition inline */}
+                <div className="mt-1 flex items-center gap-2">
+                  {drawerOrder.clientPhone ? (
                     <a
                       href={`tel:${drawerOrder.clientPhone}`}
-                      className="font-mono text-tiktok-cyan underline-offset-2 hover:underline"
+                      className="font-mono text-xs text-tiktok-cyan underline-offset-2 hover:underline"
                     >
                       📞 {drawerOrder.clientPhone}
                     </a>
-                  </p>
+                  ) : (
+                    <span className="text-xs text-neutral-600">Aucun numéro</span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setEditPhone(drawerOrder.clientPhone ?? '')}
+                    className="rounded px-1.5 py-0.5 text-[10px] text-neutral-500 ring-1 ring-white/10 hover:ring-tiktok-cyan/50 hover:text-tiktok-cyan"
+                  >
+                    ✏️
+                  </button>
+                </div>
+                {/* Formulaire d'édition du numéro */}
+                {editPhone !== null && editPhone !== undefined && editPhone !== '@@closed' && (
+                  <form
+                    className="mt-2 flex items-center gap-2"
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      setSavingPhone(true);
+                      try {
+                        await api.patch(`/orders/${drawerOrder.id}/phone`, { clientPhone: editPhone.trim() || null });
+                        qc.invalidateQueries({ queryKey: ['orders'] });
+                        setEditPhone('@@closed');
+                      } finally {
+                        setSavingPhone(false);
+                      }
+                    }}
+                  >
+                    <input
+                      type="tel"
+                      value={editPhone === '@@closed' ? '' : editPhone}
+                      onChange={(e) => setEditPhone(e.target.value)}
+                      placeholder="+225 07 00 00 00 00"
+                      className="h-8 w-40 rounded border border-white/15 bg-black px-2 text-xs text-white focus:border-tiktok-cyan/60 focus:outline-none"
+                    />
+                    <button
+                      type="submit"
+                      disabled={savingPhone}
+                      className="h-8 rounded bg-tiktok-cyan px-3 text-xs font-bold text-black disabled:opacity-50"
+                    >
+                      {savingPhone ? '…' : 'Sauver'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditPhone('@@closed')}
+                      className="h-8 rounded px-2 text-xs text-neutral-500 hover:text-white"
+                    >
+                      Annuler
+                    </button>
+                  </form>
                 )}
-                <p className="text-sm text-neutral-500">{drawerOrder.city}</p>
+                <p className="mt-1 text-sm text-neutral-500">{drawerOrder.city}</p>
               </div>
               <button
                 type="button"
@@ -579,7 +634,16 @@ const VendeuseCommandesPage = () => {
                 <X className="h-5 w-5" strokeWidth={2} aria-hidden />
               </button>
             </div>
-            <p className="mb-4 text-sm text-neutral-300">{drawerOrder.itemsSummary}</p>
+            <div className="mb-4">
+              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-neutral-400">
+                Articles commandés
+              </p>
+              <OrderItemsList
+                items={drawerOrder.items}
+                summary={drawerOrder.itemsSummary}
+                variant="drawer"
+              />
+            </div>
             <div className="mb-4 grid gap-2 rounded-xl border border-white/10 bg-[#111] p-4 text-sm">
               <div className="flex justify-between">
                 <span className="text-neutral-500">Total</span>

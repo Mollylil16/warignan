@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { STAFF_LIST_LIMIT } from '../constants/apiPagination';
 import { api } from '../services/api';
 import { useAuthStore } from '../store/authStore';
+import type { OrderItemDetail } from '../types/domain';
 
 export type DepositCoverage = 'none' | 'partial' | 'full';
 
@@ -11,6 +12,7 @@ export type StaffReservationRow = {
   clientName: string;
   clientPhone: string;
   productsSummary: string;
+  items?: OrderItemDetail[];
   subtotalFcfa?: number;
   discountFcfa?: number;
   promoCode?: string | null;

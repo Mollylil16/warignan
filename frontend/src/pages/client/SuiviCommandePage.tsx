@@ -6,6 +6,7 @@ import type { TrackingOrder, TrackingReservation } from '../../types/tracking';
 import { useClientTracking } from '../../hooks/useClientTracking';
 import WavePendingEncart from '../../components/payment/WavePendingEncart';
 import { formatPrice } from '../../utils/formatPrice';
+import { OrderItemsList } from '../../components/orders/OrderItemsList';
 
 const orderStepClientLabel: Record<OrderStep, string> = {
   preparation: 'Préparation de ta commande',
@@ -183,9 +184,10 @@ function OrderTrackingCard({ order }: { order: TrackingOrder }) {
   return (
     <article className="rounded-xl border border-white/10 bg-[#111] p-5">
       <p className="mb-1 font-mono text-sm text-tiktok-cyan">{order.reference}</p>
-      <p className="text-lg font-bold text-white">Commande</p>
-      <p className="mb-4 text-sm text-neutral-500">{order.city}</p>
-      <p className="mb-2 text-sm text-neutral-400">{order.itemsSummary}</p>
+      <p className="mb-3 text-sm text-neutral-500">{order.city}</p>
+      <div className="mb-4">
+        <OrderItemsList items={order.items} summary={order.itemsSummary} variant="cards" />
+      </div>
       <div className="mb-4 rounded-lg border border-white/10 bg-black/30 p-3 text-sm text-neutral-300">
         <div className="flex justify-between">
           <span className="text-neutral-400">Sous-total</span>
@@ -257,8 +259,9 @@ function ReservationTrackingCard({ reservation }: { reservation: TrackingReserva
   return (
     <article className="rounded-xl border border-white/10 bg-[#111] p-5">
       <p className="mb-1 font-mono text-sm text-reserve-purple">{reservation.reference}</p>
-      <p className="text-lg font-bold text-white">Réservation</p>
-      <p className="mb-4 text-sm text-neutral-500">{reservation.productsSummary}</p>
+      <div className="mb-4">
+        <OrderItemsList items={reservation.items} summary={reservation.productsSummary} variant="cards" />
+      </div>
       <div className="mb-4 rounded-lg border border-white/10 bg-black/30 p-3 text-sm text-neutral-300">
         <div className="flex justify-between">
           <span className="text-neutral-400">Sous-total</span>

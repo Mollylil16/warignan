@@ -5,6 +5,7 @@ import { useReservationsList } from '../../hooks/useReservations';
 import { useDebounce } from '../../hooks/useDebounce';
 import { formatPrice } from '../../utils/formatPrice';
 import { downloadOrdersCsv } from '../../utils/ordersCsvExport';
+import { OrderItemsList } from '../../components/orders/OrderItemsList';
 import type { StaffOrderRow } from '../../hooks/useOrders';
 
 const stepLabel: Record<string, string> = {
@@ -96,11 +97,12 @@ const AllOrdersPage = () => {
           </div>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-white/10">
-            <table className="w-full min-w-[640px] text-left text-sm">
+            <table className="w-full min-w-[720px] text-left text-sm">
               <thead className="border-b border-white/10 bg-[#141414] text-xs uppercase text-neutral-500">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Référence</th>
                   <th className="px-4 py-3 font-semibold">Client</th>
+                  <th className="px-4 py-3 font-semibold">Articles</th>
                   <th className="px-4 py-3 font-semibold">Ville</th>
                   <th className="px-4 py-3 font-semibold">Étape</th>
                   <th className="px-4 py-3 font-semibold">Paiement</th>
@@ -110,7 +112,7 @@ const AllOrdersPage = () => {
               <tbody className="divide-y divide-white/5 bg-[#111]">
                 {orders.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-sm text-neutral-600">
+                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-neutral-600">
                       Aucune commande trouvée.
                     </td>
                   </tr>
@@ -128,6 +130,9 @@ const AllOrdersPage = () => {
                             {o.clientPhone}
                           </a>
                         )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <OrderItemsList items={o.items} summary={o.itemsSummary} variant="compact" />
                       </td>
                       <td className="px-4 py-3">{o.city}</td>
                       <td className="px-4 py-3">{stepLabel[o.step] ?? o.step}</td>
@@ -188,11 +193,12 @@ const AllOrdersPage = () => {
           </div>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-white/10">
-            <table className="w-full min-w-[640px] text-left text-sm">
+            <table className="w-full min-w-[720px] text-left text-sm">
               <thead className="border-b border-white/10 bg-[#141414] text-xs uppercase text-neutral-500">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Référence</th>
                   <th className="px-4 py-3 font-semibold">Client</th>
+                  <th className="px-4 py-3 font-semibold">Articles</th>
                   <th className="px-4 py-3 font-semibold">État</th>
                   <th className="px-4 py-3 font-semibold">Acompte</th>
                   <th className="px-4 py-3 font-semibold text-right">Total</th>
@@ -201,7 +207,7 @@ const AllOrdersPage = () => {
               <tbody className="divide-y divide-white/5 bg-[#111]">
                 {filteredReservations.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-sm text-neutral-600">
+                    <td colSpan={6} className="px-4 py-8 text-center text-sm text-neutral-600">
                       Aucune réservation trouvée.
                     </td>
                   </tr>
@@ -210,6 +216,9 @@ const AllOrdersPage = () => {
                     <tr key={r.id} className="text-neutral-300 hover:bg-white/[0.02]">
                       <td className="px-4 py-3 font-mono text-xs text-reserve-purple">{r.reference}</td>
                       <td className="px-4 py-3 text-white">{r.clientName}</td>
+                      <td className="px-4 py-3">
+                        <OrderItemsList items={r.items} summary={r.productsSummary} variant="compact" />
+                      </td>
                       <td className="px-4 py-3 text-xs">{workflowLabel[r.workflow] ?? r.workflow}</td>
                       <td className="px-4 py-3">
                         <span

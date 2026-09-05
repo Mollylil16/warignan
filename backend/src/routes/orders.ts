@@ -12,6 +12,10 @@ import {
   sumConfirmedPayments,
   parseItemsSummary,
 } from '../services/paymentTotals.js';
+import {
+  enrichSummariesWithProducts,
+  buildEnrichedItems,
+} from '../services/orderItems.js';
 
 const router = Router();
 
@@ -89,6 +93,9 @@ router.post('/checkout', async (req, res, next) => {
         step: 'preparation',
       },
     });
+    const productMap = new Map(products.map((p) => [p.code, p]));
+    const items = buildEnrichedItems(order.itemsSummary, productMap);
+
     res.status(201).json({
       id: order.id,
       reference: order.reference,
@@ -96,6 +103,7 @@ router.post('/checkout', async (req, res, next) => {
       clientPhone: order.clientPhone,
       city: order.city,
       itemsSummary: order.itemsSummary,
+      items,
       subtotalFcfa: order.subtotalFcfa,
       discountFcfa: order.discountFcfa,
       promoCode: order.promoCode,
@@ -175,6 +183,8 @@ router.get('/', async (req, res, next) => {
       }
     }
 
+    const itemsBySummary = await enrichSummariesWithProducts(orders.map((o) => o.itemsSummary));
+
     res.json({
       data: orders.map((o) => {
         const paid = paidByRef.get(o.reference) ?? 0;
@@ -186,6 +196,7 @@ router.get('/', async (req, res, next) => {
           clientPhone: o.clientPhone ?? null,
           city: o.city,
           itemsSummary: o.itemsSummary,
+          items: itemsBySummary.get(o.itemsSummary) ?? [],
           subtotalFcfa: o.subtotalFcfa,
           discountFcfa: o.discountFcfa,
           promoCode: o.promoCode,
@@ -225,6 +236,22 @@ router.patch('/:id/courier', async (req, res, next) => {
       courierId: (updated as any).courierId ?? null,
       courierName: (updated as any).courierName ?? null,
     });
+  } catch (e) {
+    next(e);
+  }
+});
+
+/** Mise à jour manuelle du numéro de téléphone client (par la vendeuse depuis le détail). */
+router.patch('/:id/phone', async (req, res, next) => {
+  try {
+    const body = z.object({ clientPhone: z.string().max(40).nullable() }).parse(req.body);
+    const order = await prisma.order.findUnique({ where: { id: req.params.id } });
+    if (!order) throw new HttpError(404, 'Commande introuvable');
+    const updated = await prisma.order.update({
+      where: { id: order.id },
+      data: { clientPhone: body.clientPhone ?? null },
+    });
+    res.json({ id: updated.id, reference: updated.reference, clientPhone: updated.clientPhone ?? null });
   } catch (e) {
     next(e);
   }

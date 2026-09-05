@@ -1,4 +1,4 @@
-import type { OrderStep, ReservationWorkflow, DepositStatus } from './domain';
+import type { OrderStep, ReservationWorkflow, DepositStatus, OrderItemDetail } from './domain';
 
 export type TrackingOrder = {
   id: string;
@@ -6,6 +6,7 @@ export type TrackingOrder = {
   clientName: string;
   city: string;
   itemsSummary: string;
+  items?: OrderItemDetail[];
   subtotalFcfa: number;
   discountFcfa: number;
   promoCode: string | null;
@@ -23,6 +24,7 @@ export type TrackingReservation = {
   clientName: string;
   clientPhone: string;
   productsSummary: string;
+  items?: OrderItemDetail[];
   subtotalFcfa: number;
   discountFcfa: number;
   promoCode: string | null;

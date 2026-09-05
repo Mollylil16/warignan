@@ -13,3 +13,12 @@ export type DepositStatus = 'pending' | 'paid' | 'failed';
 export type MediaGallerySlot = 'robes' | 'crops' | 'live' | 'banners' | 'uncategorized';
 
 export type PromotionTypeApi = 'percent' | 'fixed';
+
+export type OrderItemDetail = {
+  code: string;
+  qty: number;
+  nom?: string | null;
+  prix?: number | null;
+  image?: string | null;
+  images?: string[];
+};
